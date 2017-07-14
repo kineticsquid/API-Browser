@@ -1,0 +1,9 @@
+applications:
+- path: .
+  memory: 128M
+  instances: 1
+  domain: mybluemix.net
+  name: CF_API_Browser
+  host: CF_API_Browser
+  disk_quota: 1024M
+  buildpack: python_buildpack

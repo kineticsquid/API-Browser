@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Bluemix Cloud Foundry API Navigator</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/stylesheets/style.css">
+</head>
+
+<body>
+
+<div align="center">
+    <form>
+        <input type="button" value="api.ng.bluemix.net" class="region-button"
+               onclick="window.location.href='/api.ng.bluemix.net'"/>
+        <input type="button" value="api.stage1.bluemix.net" class="region-button"
+               onclick="window.location.href='/api.stage1.bluemix.net'"/>
+        <input type="button" value="api.eu-gb.bluemix.net" class="region-button"
+               onclick="window.location.href='/api.eu-gb.bluemix.net'"/>
+        <input type="button" value="api.au-de.bluemix.net" class="region-button"
+               onclick="window.location.href='/api.eu-de.bluemix.net'"/>
+        <input type="button" value="api.au-syd.bluemix.net" class="region-button"
+               onclick="window.location.href='/api.au-syd.bluemix.net'"/>
+    </form>
+</div>
+
+<div>
+    <h1> {{ title }} </h1>
+</div>
+
+<hr>
+
+<div>
+    <pre>
+{{ content|safe() }}
+    </pre>
+</div>
+
+<!-- The Modal -->
+<div id="id01" class="{{ modalstyle }}">
+
+    <!-- Modal Content -->
+    <form class="modal-content" action="/login">
+        <div class="imgcontainer">
+            <img src="/static/images/IBM_Watson_Logo_2017.png" alt="IBM Watson Logo" class="avatar">
+        </div>
+
+        <div class="modal-text">
+            {{ region }}
+        </div>
+
+        <div class="container">
+            <input type="text" placeholder="Bluemix Username" name="username" autofocus="autofocus" required alt="Bluemix Username">
+            <input type="password" placeholder="Bluemix Password" name="password" required alt="Bluemix Password">
+            <input type="hidden" value="{{ redirect }}" name="redirect">
+            <input type="hidden" value="{{ region }}" name="region">
+        </div>
+
+        <div class="container" style="background-color:#f1f1f1">
+            <button type="submit" class="login-button">Login</button>
+            <button type="button" class="login-button" onclick="document.getElementById('id01').style.display='none'">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Get the modal
+var modal = document.getElementById('id01');
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+
+</script>
+
+</body>
+
+</html>
