@@ -29,6 +29,25 @@ AUTHORIZATION_HEADER_KEY = 'Authorization'
 app = Flask(__name__)
 
 """
+Method to define and return a logger for logging
+"""
+import logging
+import sys
+
+def get_my_logger():
+    logger = logging.getLogger('My Logger')
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(message)s', "%H:%M:%S")
+    ch.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    return logger
+
+
+"""
 Routine to generate the secret key needed to use the Flask session object
 """
 def generate_secret_key():
@@ -134,6 +153,9 @@ def add_links(json_results, region):
 
 @app.route('/')
 def Welcome():
+    logger.info(str(request.url))
+    WSSC = request.headers.get('$WSSC', None)
+    logger.info('WSSC: %s' % WSSC)
     return render_template('results.html', modalstyle='modal-hidden')
 
 
@@ -220,5 +242,17 @@ def Login():
 
 port = os.getenv('PORT', PORT)
 app.secret_key = generate_secret_key()
+logger = get_my_logger()
+logger.info('Starting....')
+vcap_application = os.getenv('VCAP_APPLICATION')
+if vcap_application is not None:
+    logger.info(json.dumps(vcap_application, indent=4))
+else:
+    logger.info('No VCAP_APPLICATION environment variable')
+vcap_services = os.getenv('VCAP_SERVICES')
+if vcap_services is not None:
+    logger.info(json.dumps(vcap_services, indent=4))
+else:
+    logger.info('No VCAP_SERVICES environment variable')
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))
