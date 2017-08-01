@@ -153,11 +153,8 @@ def add_links(json_results, region):
 
 @app.route('/')
 def Welcome():
-    logger.info(str(request.url))
-    WSSC = request.headers.get('$WSSC', None)
     forwarded_Protocol = request.headers.get('X-Forwarded-Proto', None)
-    logger.info('WSSC: %s' % WSSC)
-    logger.info('X-Forwarded-Proto: %s' % forwarded_Protocol)
+    logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_Protocol)))
     if forwarded_Protocol is 'http':
         logger.info('Redirecting %s to https.' % request.full_path)
         return redirect('https://%s' % request.full_path)
