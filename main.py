@@ -155,7 +155,7 @@ def add_links(json_results, region):
 def Welcome():
     forwarded_Protocol = request.headers.get('X-Forwarded-Proto', None)
     logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_Protocol)))
-    if forwarded_Protocol is 'http':
+    if forwarded_Protocol == 'http':
         logger.info('Redirecting %s to https.' % request.full_path)
         return redirect('https://%s' % request.full_path)
     else:
@@ -228,7 +228,7 @@ def Login():
     if redirect_url is None:
         redirect_url = bluemix_region
     # Just in case, if there is no leading '/', add one
-    if redirect_url[0] is not '/':
+    if redirect_url[0] != '/':
         redirect_url = '/%s' % redirect_url
     # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
     # redirect URL. Otherwise, something went wrong, return a 403.
