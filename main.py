@@ -153,13 +153,29 @@ def add_links(json_results, region):
 
 @app.route('/')
 def Welcome():
+    # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. If we don't
+    # find that header set, look for wsgi-url_scheme
     forwarded_Protocol = request.headers.get('X-Forwarded-Proto', None)
-    logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_Protocol)))
-    if forwarded_Protocol == 'http':
-        logger.info('Redirecting %s to https.' % request.full_path)
-        return redirect('https://%s' % request.full_path)
+    if forwarded_Protocol is not None:
+        logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_Protocol)))
+        if forwarded_Protocol == 'http':
+            new_url = request.url.replace('http', 'https', 1)
+            logger.info('Redirecting to %s.' % new_url)
+            return redirect(new_url)
+        else:
+            return render_template('results.html', modalstyle='modal-hidden')
     else:
-        return render_template('results.html', modalstyle='modal-hidden')
+        url_scheme = request.headers.environ.get('wsgi.url_scheme', None)
+        if url_scheme is not None:
+            logger.info('Request: %s. wsgi.url_scheme: %s' % (str(request.url), str(url_scheme)))
+            if url_scheme == 'http':
+                new_url = request.url.replace('http', 'https', 1)
+                logger.info('Redirecting to %s.' % new_url)
+                return redirect(new_url)
+            else:
+                return render_template('results.html', modalstyle='modal-hidden')
+        else:
+            return render_template('results.html', modalstyle='modal-hidden')
 
 
 @app.route('/<path:api_path>')
