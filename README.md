@@ -25,3 +25,6 @@ Notes in implementing HTTPS
 Info on forcing HTTPS:
   - https://developer.ibm.com/answers/questions/16016/how-do-i-enforce-ssl-for-my-bluemix-application.html
   - https://github.com/kennethreitz/flask-sslify
+
+According to the first article and verified in the code through the $WSSC header, HTTP and HTTPS come into the app
+as HTTP. the $WSSC header value specifies the protocol specified by the user.

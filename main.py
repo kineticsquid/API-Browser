@@ -155,8 +155,14 @@ def add_links(json_results, region):
 def Welcome():
     logger.info(str(request.url))
     WSSC = request.headers.get('$WSSC', None)
+    forwarded_Protocol = request.headers.get('X-Forwarded-Proto', None)
     logger.info('WSSC: %s' % WSSC)
-    return render_template('results.html', modalstyle='modal-hidden')
+    logger.info('X-Forwarded-Proto: %s' % forwarded_Protocol)
+    if forwarded_Protocol is 'http':
+        logger.info('Redirecting %s to https.' % request.full_path)
+        return redirect('https://%s' % request.full_path)
+    else:
+        return render_template('results.html', modalstyle='modal-hidden')
 
 
 @app.route('/<path:api_path>')
@@ -193,7 +199,7 @@ def Handle_Everything_Else(api_path):
         # if only the region is sent (not CF API call), display a page with links to make top level CF API calls.
         if api is None:
             # this render statement adds the right region to the hrefs
-            initial_links = render_template('initial_content.html', region=region)
+            initial_links = render_template('initial-content.html', region=region)
             initial_page = render_template('results.html', title=region, region=region, content=initial_links,
                                            modalstyle='modal-hidden')
             resp = make_response(initial_page, 200)
@@ -246,11 +252,13 @@ logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
 if vcap_application is not None:
+    logger.info('VCAP_APPLICATION:')
     logger.info(json.dumps(vcap_application, indent=4))
 else:
     logger.info('No VCAP_APPLICATION environment variable')
 vcap_services = os.getenv('VCAP_SERVICES')
 if vcap_services is not None:
+    logger.info('VCAP_SERVICES:')
     logger.info(json.dumps(vcap_services, indent=4))
 else:
     logger.info('No VCAP_SERVICES environment variable')
