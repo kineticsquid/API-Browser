@@ -165,17 +165,7 @@ def Welcome():
         else:
             return render_template('results.html', modalstyle='modal-hidden')
     else:
-        url_scheme = request.headers.environ.get('wsgi.url_scheme', None)
-        if url_scheme is not None:
-            logger.info('Request: %s. wsgi.url_scheme: %s' % (str(request.url), str(url_scheme)))
-            if url_scheme == 'http':
-                new_url = request.url.replace('http', 'https', 1)
-                logger.info('Redirecting to %s.' % new_url)
-                return redirect(new_url)
-            else:
-                return render_template('results.html', modalstyle='modal-hidden')
-        else:
-            return render_template('results.html', modalstyle='modal-hidden')
+        return render_template('results.html', modalstyle='modal-hidden')
 
 
 @app.route('/<path:api_path>')
@@ -258,9 +248,16 @@ def Login():
     except Exception as e:
         return str(e), 403
 
+# these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
+# Bluemix logs
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.INFO)
 
 port = os.getenv('PORT', PORT)
+
+# This is for the Flask session object
 app.secret_key = generate_secret_key()
+
 logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
