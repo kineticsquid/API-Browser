@@ -13,20 +13,22 @@ import os
 import random
 import requests
 from flask import Flask, request, render_template, make_response, session, redirect
+import werkzeug
+
+
+app = Flask(__name__)
 
 PORT = '5000'
 USERNAME_KEY = 'username'
 PASSWORD_KEY = 'password'
 REGION_KEY = 'region'
 REDIRECT_KEY = 'redirect'
+AUTHORIZATION_HEADER_KEY = 'Authorization'
 BLUEMIX_REGIONS = ['api.ng.bluemix.net',
                    'api.eu-gb.bluemix.net',
                    'api.eu-de.bluemix.net',
                    'api.au-syd.bluemix.net',
                    'api.stage1.bluemix.net']
-AUTHORIZATION_HEADER_KEY = 'Authorization'
-
-app = Flask(__name__)
 
 """
 Method to define and return a logger for logging
@@ -45,6 +47,29 @@ def get_my_logger():
     logger.addHandler(ch)
 
     return logger
+
+"""
+Method to display an error page given various errors
+"""
+def display_error_page(error, **kwargs):
+    error_message = kwargs.get('error_message', None)
+    log_message = kwargs.get('log_message', None)
+    if error == 404:
+        if error_message is None:
+            error_message = 'Hmmm... not sure where you\'re trying to go.'
+        image_file = '404.jpeg'
+    elif error == 403:
+        if error_message is None:
+            error_message = 'You need better connections.'
+        image_file = '403.jpeg'
+    else:
+        if error_message is None:
+            error_message = 'Bad, bad server error: %s' % str(error)
+        image_file = 'any_error.jpeg'
+    if log_message is None:
+        log_message = error_message
+    logger.info(log_message)
+    return render_template('error.html', image_file=image_file, error_message=error_message)
 
 
 """
@@ -151,14 +176,19 @@ def add_links(json_results, region):
         json_results = json_results.replace(match, href)
     return json_results
 
+
+@app.errorhandler(Exception)
+def handle_bad_request(e):
+    display_error_page(e.status_code)
+
 @app.route('/')
 def Welcome():
     # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. If we don't
     # find that header set, look for wsgi-url_scheme
-    forwarded_Protocol = request.headers.get('X-Forwarded-Proto', None)
-    if forwarded_Protocol is not None:
-        logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_Protocol)))
-        if forwarded_Protocol == 'http':
+    forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
+    if forwarded_protocol is not None:
+        logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
+        if forwarded_protocol == 'http':
             new_url = request.url.replace('http', 'https', 1)
             logger.info('Redirecting to %s.' % new_url)
             return redirect(new_url)
@@ -166,6 +196,11 @@ def Welcome():
             return render_template('results.html', modalstyle='modal-hidden')
     else:
         return render_template('results.html', modalstyle='modal-hidden')
+
+@app.route('/test')
+# Route for testing purposes only
+def Test():
+    return render_template('test.html')
 
 
 @app.route('/<path:api_path>')
@@ -182,9 +217,9 @@ def Handle_Everything_Else(api_path):
     if region_results is not None:
         region = region_results.group()
         if region not in BLUEMIX_REGIONS:
-            return 'Duh', 404
+            return display_error_page(404)
     else:
-        return 'Duh', 404
+        return display_error_page(404)
     if api_results is not None:
         api = api_results.group()
     else:
@@ -212,19 +247,24 @@ def Handle_Everything_Else(api_path):
         else:
             bearer_token = session[region]['Authorization']
             api_url = 'https://%s' % api
-            api_results = get_all_bluemix_results(api_url, { 'Authorization': bearer_token})
-            displayable_content = json.dumps(api_results, indent=4)
-            # add the href links to the API URLs found in the JSON results
-            displayable_content_with_links = add_links(displayable_content, region)
+            try:
+                api_results = get_all_bluemix_results(api_url, { 'Authorization': bearer_token})
+                displayable_content = json.dumps(api_results, indent=4)
+                # add the href links to the API URLs found in the JSON results
+                displayable_content_with_links = add_links(displayable_content, region)
 
-            page = render_template('results.html', title=api, region=region, content=displayable_content_with_links,
-                                           modalstyle='modal-hidden')
-            resp = make_response(page, 200)
-            return resp
+                page = render_template('results.html', title=api, region=region, content=displayable_content_with_links,
+                                       modalstyle='modal-hidden')
+                resp = make_response(page, 200)
+                return resp
+            except(Exception) as e:
+                return display_error_page(404, log_message=str(e))
+
 
 
 @app.route('/login')
 def Login():
+    r = request
     # information to log the user into a region
     username = request.args[USERNAME_KEY]
     password = request.args[PASSWORD_KEY]
@@ -244,26 +284,24 @@ def Login():
             session[bluemix_region] = authorization_header
             return redirect(redirect_url)
         else:
-            return 'Doh', 403
+            return display_error_page(403)
     except Exception as e:
-        return str(e), 403
+        return display_error_page(403)
 
-# these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
-# Bluemix logs
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.INFO)
 
 port = os.getenv('PORT', PORT)
-
 # This is for the Flask session object
 app.secret_key = generate_secret_key()
-
 logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
 if vcap_application is not None:
     logger.info('VCAP_APPLICATION:')
     logger.info(json.dumps(vcap_application, indent=4))
+    # these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
+    # Bluemix logs. Only set this if running in Bluemix and not locally
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.INFO)
 else:
     logger.info('No VCAP_APPLICATION environment variable')
 vcap_services = os.getenv('VCAP_SERVICES')
