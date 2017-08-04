@@ -68,7 +68,7 @@ def display_error_page(error, **kwargs):
         image_file = 'any_error.jpeg'
     if log_message is None:
         log_message = error_message
-    logger.info(log_message)
+    logger.info('Error %s: %s' % (str(error),log_message))
     return render_template('error.html', image_file=image_file, error_message=error_message)
 
 
@@ -217,9 +217,9 @@ def Handle_Everything_Else(api_path):
     if region_results is not None:
         region = region_results.group()
         if region not in BLUEMIX_REGIONS:
-            return display_error_page(404)
+            return display_error_page(404, log_message='Unrecognized region: \'%s\' in \'%s\'.' % (region, api_path))
     else:
-        return display_error_page(404)
+        return display_error_page(404, log_message='No region found in \'%s\'.' % api_path)
     if api_results is not None:
         api = api_results.group()
     else:
@@ -284,9 +284,9 @@ def Login():
             session[bluemix_region] = authorization_header
             return redirect(redirect_url)
         else:
-            return display_error_page(403)
+            return display_error_page(403, log_message='Username: \'%s\'.' % username)
     except Exception as e:
-        return display_error_page(403)
+        return display_error_page(403, log_message='Username: \'%s\'.' % username)
 
 
 port = os.getenv('PORT', PORT)
