@@ -27,8 +27,7 @@ AUTHORIZATION_HEADER_KEY = 'Authorization'
 BLUEMIX_REGIONS = ['api.ng.bluemix.net',
                    'api.eu-gb.bluemix.net',
                    'api.eu-de.bluemix.net',
-                   'api.au-syd.bluemix.net',
-                   'api.stage1.bluemix.net']
+                   'api.au-syd.bluemix.net']
 
 """
 Method to define and return a logger for logging

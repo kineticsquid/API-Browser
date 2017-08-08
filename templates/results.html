@@ -18,8 +18,6 @@
     <form>
         <input type="button" value="api.ng.bluemix.net" class="region-button"
                onclick="window.location.href='/api.ng.bluemix.net'"/>
-        <input type="button" value="api.stage1.bluemix.net" class="region-button"
-               onclick="window.location.href='/api.stage1.bluemix.net'"/>
         <input type="button" value="api.eu-gb.bluemix.net" class="region-button"
                onclick="window.location.href='/api.eu-gb.bluemix.net'"/>
         <input type="button" value="api.au-de.bluemix.net" class="region-button"
@@ -55,8 +53,8 @@
         </div>
 
         <div class="container">
-            <input type="text" placeholder="Bluemix Username" name="username" autofocus="autofocus" required alt="Bluemix Username">
-            <input type="password" placeholder="Bluemix Password" name="password" required alt="Bluemix Password">
+            <input type="text" placeholder="Bluemix Username or 'apikey'" name="username" autofocus="autofocus" required alt="Bluemix Username or 'apikey' ">
+            <input type="password" placeholder="Bluemix Password or apikey" name="password" required alt="Bluemix Password or apikey">
             <input type="hidden" value="{{ redirect }}" name="redirect">
             <input type="hidden" value="{{ region }}" name="region">
         </div>
