@@ -30,6 +30,16 @@ BLUEMIX_REGIONS = ['api.ng.bluemix.net',
                    'api.au-syd.bluemix.net']
 
 """
+Custom exception to surface HTTP status codes
+"""
+class AppHTTPError(Exception):
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+    def __str__(self):
+        return repr('%s - %s' % (self.code,self.message))
+
+"""
 Method to define and return a logger for logging
 """
 import logging
@@ -129,9 +139,9 @@ def bluemix_auth(bluemix_api_endpoint, **kwargs):
             }
             return http_headers
         else:
-            raise Exception('Error getting bearer token: %s %s' % (response.status_code, response.content))
+            raise AppHTTPError(response.status_code, 'Error getting bearer token: %s' % response.content)
     else:
-        raise Exception('Error getting bearer token: %s %s' % (response.status_code, response.content))
+        raise AppHTTPError(response.status_code, 'Error getting bearer token: %s' % response.content)
 
 """
 Routine to get all results from a Bluemix CF API call by handling paging
@@ -158,8 +168,8 @@ def get_all_bluemix_results(url, http_headers):
                 all_results = http_results
                 url = None
         else:
-            raise Exception('Error getting results from %s: %s %s' %
-                            (url, response.status_code, response.content))
+            raise AppHTTPError(response.status_code, 'Error getting results from %s: %s' %
+                            (url, response.content))
     return all_results
 
 """
@@ -169,10 +179,13 @@ Routine to add href links to URLs enbedded in the JSON returned nby the CF api.
 def add_links(json_results, region):
     api_url_regex = '\"\/v2\/\S+\"'
     matches = re.findall(api_url_regex, json_results)
+    i = 1
     for match in matches:
         url = match.replace('"', '')
         href = '<a href="/%s%s">%s</a>' % (region, url, match)
         json_results = json_results.replace(match, href)
+        print('%s of %s.' % (i, len(matches)))
+        i += 1
     return json_results
 
 
@@ -257,7 +270,10 @@ def Handle_Everything_Else(api_path):
                 resp = make_response(page, 200)
                 return resp
             except(Exception) as e:
-                return display_error_page(404, log_message=str(e))
+                if type(e) is AppHTTPError:
+                    return display_error_page(e.code, log_message=e.message)
+                else:
+                    return display_error_page(404, log_message=str(e))
 
 
 
