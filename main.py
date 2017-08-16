@@ -213,6 +213,17 @@ def Welcome():
 @app.route('/test')
 # Route for testing purposes only
 def Test():
+    try:
+        h = request.headers
+        k = request.headers.keys()
+        for i in k:
+            print(i)
+        s = request.headers.get('SERVER_NAME')
+        r = request.headers.get('HTTP_REFERER')
+        p = request.headers.get('SERVER_PORT')
+        print('%s %s %s' % (s, r, p))
+    except(Exception) as e:
+        print(e)
     return render_template('test.html')
 
 
@@ -304,29 +315,51 @@ def get_disp_content2(api_results, region):
 
 @app.route('/login')
 def Login():
-    r = request
-    # information to log the user into a region
-    username = request.args[USERNAME_KEY]
-    password = request.args[PASSWORD_KEY]
-    bluemix_region = request.args[REGION_KEY]
-    # get the redirect URL. If none, make it the main page for a region
-    redirect_url = request.args.get(REDIRECT_KEY, None)
-    if redirect_url is None:
-        redirect_url = bluemix_region
-    # Just in case, if there is no leading '/', add one
-    if redirect_url[0] != '/':
-        redirect_url = '/%s' % redirect_url
-    # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
-    # redirect URL. Otherwise, something went wrong, return a 403.
     try:
-        authorization_header = bluemix_auth('https://%s' % bluemix_region, userid=username, password=password)
-        if authorization_header is not None:
-            session[bluemix_region] = authorization_header
-            return redirect(redirect_url)
+        k = request.headers.keys()
+        for i in k:
+            print(i)
+        s = request.headers.get('SERVER_NAME')
+        r = request.headers.get('HTTP_REFERER')
+        p = request.headers.get('SERVER_PORT')
+    except(Exception) as e:
+        print(e)
+
+
+
+    referer = request.headers.get('HTTP_REFERER', None)
+    if referer is None:
+        return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
+    else:
+        server = request.headers.get('SERVER_NAME', None)
+        if server is None:
+            return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
         else:
-            return display_error_page(403, log_message='Username: \'%s\'.' % username)
-    except Exception as e:
-        return display_error_page(403, log_message='Username: \'%s\'.' % username)
+            if server not in referer:
+                return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (referer, server))
+            else:
+                # information to log the user into a region
+                username = request.args[USERNAME_KEY]
+                password = request.args[PASSWORD_KEY]
+                bluemix_region = request.args[REGION_KEY]
+                # get the redirect URL. If none, make it the main page for a region
+                redirect_url = request.args.get(REDIRECT_KEY, None)
+                if redirect_url is None:
+                    redirect_url = bluemix_region
+                # Just in case, if there is no leading '/', add one
+                if redirect_url[0] != '/':
+                    redirect_url = '/%s' % redirect_url
+                # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
+                # redirect URL. Otherwise, something went wrong, return a 403.
+                try:
+                    authorization_header = bluemix_auth('https://%s' % bluemix_region, userid=username, password=password)
+                    if authorization_header is not None:
+                        session[bluemix_region] = authorization_header
+                        return redirect(redirect_url)
+                    else:
+                        return display_error_page(403, log_message='Username: \'%s\'.' % username)
+                except Exception as e:
+                    return display_error_page(403, log_message='Username: \'%s\'.' % username)
 
 
 port = os.getenv('PORT', PORT)
