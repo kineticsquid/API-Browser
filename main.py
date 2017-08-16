@@ -196,17 +196,19 @@ def handle_bad_request(e):
 def Welcome():
     # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. If we don't
     # find that header set, look for wsgi-url_scheme
-    forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
-    if forwarded_protocol is not None:
-        logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
-        if forwarded_protocol == 'http':
-            new_url = request.url.replace('http', 'https', 1)
-            logger.info('Redirecting to %s.' % new_url)
-            return redirect(new_url)
-        else:
-            return render_template('results.html', modalstyle='modal-hidden')
-    else:
-        return render_template('results.html', modalstyle='modal-hidden')
+    # forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
+    # if forwarded_protocol is not None:
+    #     logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
+    #     if forwarded_protocol == 'http':
+    #         new_url = request.url.replace('http', 'https', 1)
+    #         logger.info('Redirecting to %s.' % new_url)
+    #         return redirect(new_url)
+    #     else:
+    #         return render_template('results.html', modalstyle='modal-hidden')
+    # else:
+    #     return render_template('results.html', modalstyle='modal-hidden')
+
+    return render_template('results.html', modalstyle='modal-hidden')
 
 @app.route('/test')
 # Route for testing purposes only
