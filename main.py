@@ -13,7 +13,7 @@ import os
 import random
 import requests
 from flask import Flask, request, render_template, make_response, session, redirect
-import werkzeug
+import time
 
 
 app = Flask(__name__)
@@ -156,7 +156,7 @@ def get_all_bluemix_results(url, http_headers):
             results = http_results.get('resources', None)
             if results is not None:
                 # results key is returned if the response is a list
-                all_results += http_results['resources']
+                all_results.append(http_results['resources'])
                 next_url = http_results['next_url']
                 if next_url is not None:
                     index = url.find(next_url[0:3])
@@ -165,7 +165,7 @@ def get_all_bluemix_results(url, http_headers):
                     url = None
             else:
                 # if there is no results key, just a single result, so return it.
-                all_results = http_results
+                all_results.append(http_results)
                 url = None
         else:
             raise AppHTTPError(response.status_code, 'Error getting results from %s: %s' %
@@ -184,7 +184,6 @@ def add_links(json_results, region):
         url = match.replace('"', '')
         href = '<a href="/%s%s">%s</a>' % (region, url, match)
         json_results = json_results.replace(match, href)
-        print('%s of %s.' % (i, len(matches)))
         i += 1
     return json_results
 
@@ -261,10 +260,18 @@ def Handle_Everything_Else(api_path):
             api_url = 'https://%s' % api
             try:
                 api_results = get_all_bluemix_results(api_url, { 'Authorization': bearer_token})
-                displayable_content = json.dumps(api_results, indent=4)
-                # add the href links to the API URLs found in the JSON results
-                displayable_content_with_links = add_links(displayable_content, region)
 
+                # when the lists of results get long, the string processing can take some time. 'get_disp_content' was
+                # the original implementation. 'get_disp_content2' is the improved version.
+                # start = time.time()
+                # displayable_content_with_links = get_disp_content(api_results, region)
+                # t = time.time() - start
+                # start = time.time()
+                # displayable_content_with_links = get_disp_content2(api_results, region)
+                # t2 = time.time() - start
+                # print('t: %s. t2: %s.' % (str(t), str(t2)))
+
+                displayable_content_with_links = get_disp_content2(api_results, region)
                 page = render_template('results.html', title=api, region=region, content=displayable_content_with_links,
                                        modalstyle='modal-hidden')
                 resp = make_response(page, 200)
@@ -275,6 +282,22 @@ def Handle_Everything_Else(api_path):
                 else:
                     return display_error_page(404, log_message=str(e))
 
+def get_disp_content(api_results, region):
+    displayable_content = json.dumps(api_results, indent=4)
+    # add the href links to the API URLs found in the JSON results
+    displayable_content_with_links = add_links(displayable_content, region)
+    return displayable_content_with_links
+
+def get_disp_content2(api_results, region):
+    if len(api_results) == 1:
+        output = '%s result:\n\n' % str(len(api_results))
+    else:
+        output = '%s results:\n\n' % str(len(api_results))
+    for r in api_results:
+        displayable_content = json.dumps(r, indent=4)
+        displayable_content_with_links = add_links(displayable_content, region)
+        output += displayable_content_with_links
+    return output
 
 
 @app.route('/login')
