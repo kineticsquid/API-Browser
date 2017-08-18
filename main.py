@@ -91,6 +91,7 @@ def generate_secret_key():
         secret_key += char
     return secret_key
 
+
 """
 Routine to authenticate to Bluemix using IBMid, returns a bearer token
 """
@@ -187,6 +188,24 @@ def add_links(json_results, region):
         i += 1
     return json_results
 
+"""
+Method to force https when http is specified.
+"""
+@app.before_request
+def force_https():
+    # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. We only want this
+    # redirect if we're running in Bluemix because it'll fail running locally
+    url = request.url
+    if request.endpoint in app.view_functions:
+        forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
+        if forwarded_protocol is not None:
+            logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
+            if forwarded_protocol == 'http':
+                new_url = request.url.replace('http://', 'https://')
+                logger.info('Redirecting to %s.' % new_url)
+                return redirect(new_url)
+
+
 
 @app.errorhandler(Exception)
 def handle_bad_request(e):
@@ -194,34 +213,17 @@ def handle_bad_request(e):
 
 @app.route('/')
 def Welcome():
-    # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. If we don't
-    # find that header set, look for wsgi-url_scheme
-    # forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
-    # if forwarded_protocol is not None:
-    #     logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
-    #     if forwarded_protocol == 'http':
-    #         new_url = request.url.replace('http', 'https', 1)
-    #         logger.info('Redirecting to %s.' % new_url)
-    #         return redirect(new_url)
-    #     else:
-    #         return render_template('results.html', modalstyle='modal-hidden')
-    # else:
-    #     return render_template('results.html', modalstyle='modal-hidden')
-
+    # todo: Replace Flask session with Redis use - question on dw answers
+    # todo: Once we have Redis in place, spin up multiple instances and test
     return render_template('results.html', modalstyle='modal-hidden')
 
 @app.route('/test')
 # Route for testing purposes only
 def Test():
     try:
-        h = request.headers
         k = request.headers.keys()
-        for i in k:
+        for i in request.environ.keys():
             print(i)
-        s = request.headers.get('SERVER_NAME')
-        r = request.headers.get('HTTP_REFERER')
-        p = request.headers.get('SERVER_PORT')
-        print('%s %s %s' % (s, r, p))
     except(Exception) as e:
         print(e)
     return render_template('test.html')
@@ -315,23 +317,13 @@ def get_disp_content2(api_results, region):
 
 @app.route('/login')
 def Login():
-    try:
-        k = request.headers.keys()
-        for i in k:
-            print(i)
-        s = request.headers.get('SERVER_NAME')
-        r = request.headers.get('HTTP_REFERER')
-        p = request.headers.get('SERVER_PORT')
-    except(Exception) as e:
-        print(e)
-
-
-
-    referer = request.headers.get('HTTP_REFERER', None)
+    # This checking here for referrer header is to prevent someone from going directly to the login url. We want them
+    # to come from the main page and click one of the links there
+    referer = request.environ.get('HTTP_REFERER', None)
     if referer is None:
         return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
     else:
-        server = request.headers.get('SERVER_NAME', None)
+        server = request.environ.get('SERVER_NAME', None)
         if server is None:
             return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
         else:
@@ -361,9 +353,8 @@ def Login():
                 except Exception as e:
                     return display_error_page(403, log_message='Username: \'%s\'.' % username)
 
-
 port = os.getenv('PORT', PORT)
-# This is for the Flask session object
+# This secret key is to encode the Flask session object
 app.secret_key = generate_secret_key()
 logger = get_my_logger()
 logger.info('Starting....')

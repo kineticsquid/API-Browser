@@ -28,3 +28,6 @@ Info on forcing HTTPS:
 
 According to the first article and verified in the code through the $WSSC header, HTTP and HTTPS come into the app
 as HTTP. the $WSSC header value specifies the protocol specified by the user.
+
+Primer on Python decorators:
+https://realpython.com/blog/python/primer-on-python-decorators/
