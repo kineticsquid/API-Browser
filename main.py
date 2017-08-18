@@ -233,13 +233,11 @@ def Welcome():
 @app.route('/test')
 # Route for testing purposes only
 def Test():
-    try:
-        k = request.headers.keys()
-        for i in request.environ.keys():
-            print(i)
-    except(Exception) as e:
-        print(e)
-    return render_template('test.html')
+    output_string = '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
+                    (json.dumps(vcap_services, indent=4), json.dumps(vcap_application, indent=4),
+                     request.environ.get('HTTP_REFERER', None),
+                     request.environ.get('SERVER_NAME', None))
+    return render_template('test.html', content=output_string)
 
 
 @app.route('/<path:api_path>')
