@@ -364,6 +364,7 @@ logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
 if vcap_application is not None:
+    vcap_application = json.loads(vcap_application)
     logger.info('VCAP_APPLICATION:')
     logger.info(json.dumps(vcap_application, indent=4))
     # these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
@@ -374,6 +375,7 @@ else:
     logger.info('No VCAP_APPLICATION environment variable')
 vcap_services = os.getenv('VCAP_SERVICES')
 if vcap_services is not None:
+    vcap_services = json.loads(vcap_services)
     logger.info('VCAP_SERVICES:')
     logger.info(json.dumps(vcap_services, indent=4))
 else:
