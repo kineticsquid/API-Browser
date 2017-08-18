@@ -13,7 +13,7 @@ import os
 import random
 import requests
 from flask import Flask, request, render_template, make_response, session, redirect
-import time
+from functools import wraps
 
 
 app = Flask(__name__)
@@ -157,7 +157,7 @@ def get_all_bluemix_results(url, http_headers):
             results = http_results.get('resources', None)
             if results is not None:
                 # results key is returned if the response is a list
-                all_results.append(http_results['resources'])
+                all_results += results
                 next_url = http_results['next_url']
                 if next_url is not None:
                     index = url.find(next_url[0:3])
@@ -172,6 +172,20 @@ def get_all_bluemix_results(url, http_headers):
             raise AppHTTPError(response.status_code, 'Error getting results from %s: %s' %
                             (url, response.content))
     return all_results
+
+"""
+Method to transform JSON results to a formatted string, including hrefs for display using <pre> tags
+"""
+def get_disp_content(api_results, region):
+    if len(api_results) == 1:
+        output = '%s result:\n\n' % str(len(api_results))
+    else:
+        output = '%s results:\n\n' % str(len(api_results))
+    for r in api_results:
+        displayable_content = json.dumps(r, indent=4)
+        displayable_content_with_links = add_links(displayable_content, region)
+        output += displayable_content_with_links
+    return output
 
 """
 Routine to add href links to URLs enbedded in the JSON returned nby the CF api. 
@@ -206,7 +220,6 @@ def force_https():
                 return redirect(new_url)
 
 
-
 @app.errorhandler(Exception)
 def handle_bad_request(e):
     display_error_page(e.status_code)
@@ -237,17 +250,17 @@ def Handle_Everything_Else(api_path):
     # regex to recognize a Bluemix API URL call
     api_regex = '\S+\/v2\/\S*'
     re_api = re.compile(api_regex)
-    region_results = re_region.match(api_path)
-    api_results = re_api.match(api_path)
+    region_hits = re_region.match(api_path)
+    api_hits = re_api.match(api_path)
     # Get the region, and if we don't find one or it's not one we recognize, return a 404
-    if region_results is not None:
-        region = region_results.group()
+    if region_hits is not None:
+        region = region_hits.group()
         if region not in BLUEMIX_REGIONS:
             return display_error_page(404, log_message='Unrecognized region: \'%s\' in \'%s\'.' % (region, api_path))
     else:
         return display_error_page(404, log_message='No region found in \'%s\'.' % api_path)
-    if api_results is not None:
-        api = api_results.group()
+    if api_hits is not None:
+        api = api_hits.group()
     else:
         api = None
 
@@ -275,18 +288,7 @@ def Handle_Everything_Else(api_path):
             api_url = 'https://%s' % api
             try:
                 api_results = get_all_bluemix_results(api_url, { 'Authorization': bearer_token})
-
-                # when the lists of results get long, the string processing can take some time. 'get_disp_content' was
-                # the original implementation. 'get_disp_content2' is the improved version.
-                # start = time.time()
-                # displayable_content_with_links = get_disp_content(api_results, region)
-                # t = time.time() - start
-                # start = time.time()
-                # displayable_content_with_links = get_disp_content2(api_results, region)
-                # t2 = time.time() - start
-                # print('t: %s. t2: %s.' % (str(t), str(t2)))
-
-                displayable_content_with_links = get_disp_content2(api_results, region)
+                displayable_content_with_links = get_disp_content(api_results, region)
                 page = render_template('results.html', title=api, region=region, content=displayable_content_with_links,
                                        modalstyle='modal-hidden')
                 resp = make_response(page, 200)
@@ -297,61 +299,65 @@ def Handle_Everything_Else(api_path):
                 else:
                     return display_error_page(404, log_message=str(e))
 
-def get_disp_content(api_results, region):
-    displayable_content = json.dumps(api_results, indent=4)
-    # add the href links to the API URLs found in the JSON results
-    displayable_content_with_links = add_links(displayable_content, region)
-    return displayable_content_with_links
+"""
+Method to check for referrer header to prevent someone from going directly to the login url. We want them to come from 
+the main page and click one of the links there. Slightly separate logic for running locally vs in Bluemix. Note in
+both cases the server address is 0.0.0.0. Presence of VCAP_APPLICATION environment variable indicates we're in
+Bluemix
+"""
 
-def get_disp_content2(api_results, region):
-    if len(api_results) == 1:
-        output = '%s result:\n\n' % str(len(api_results))
-    else:
-        output = '%s results:\n\n' % str(len(api_results))
-    for r in api_results:
-        displayable_content = json.dumps(r, indent=4)
-        displayable_content_with_links = add_links(displayable_content, region)
-        output += displayable_content_with_links
-    return output
+def check_referer(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        referer = request.environ.get('HTTP_REFERER', None)
+        if referer is None:
+            return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
+        if vcap_application is None:
+            server = request.environ.get('SERVER_NAME', None)
+            if server is None:
+                return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
+            else:
+                if server not in referer:
+                    return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (
+                    referer, server))
+        else:
+            uris = vcap_application.get('uris', None)
+            valid_referer = False
+            for uri in uris:
+                if uri.lower() in referer:
+                    valid_referer = True
+                    break
+            if not valid_referer:
+                return display_error_page(404, log_message='HTTP_REFERER not a valid URI: %s %s.' % (referer, uris))
+        return function(*args, **kwargs)
+
+    return wrapper
 
 
 @app.route('/login')
+@check_referer
 def Login():
-    # This checking here for referrer header is to prevent someone from going directly to the login url. We want them
-    # to come from the main page and click one of the links there
-    referer = request.environ.get('HTTP_REFERER', None)
-    if referer is None:
-        return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
-    else:
-        server = request.environ.get('SERVER_NAME', None)
-        if server is None:
-            return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
+    username = request.args[USERNAME_KEY]
+    password = request.args[PASSWORD_KEY]
+    bluemix_region = request.args[REGION_KEY]
+    # get the redirect URL. If none, make it the main page for a region
+    redirect_url = request.args.get(REDIRECT_KEY, None)
+    if redirect_url is None:
+        redirect_url = bluemix_region
+    # Just in case, if there is no leading '/', add one
+    if redirect_url[0] != '/':
+        redirect_url = '/%s' % redirect_url
+    # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
+    # redirect URL. Otherwise, something went wrong, return a 403.
+    try:
+        authorization_header = bluemix_auth('https://%s' % bluemix_region, userid=username, password=password)
+        if authorization_header is not None:
+            session[bluemix_region] = authorization_header
+            return redirect(redirect_url)
         else:
-            if server not in referer:
-                return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (referer, server))
-            else:
-                # information to log the user into a region
-                username = request.args[USERNAME_KEY]
-                password = request.args[PASSWORD_KEY]
-                bluemix_region = request.args[REGION_KEY]
-                # get the redirect URL. If none, make it the main page for a region
-                redirect_url = request.args.get(REDIRECT_KEY, None)
-                if redirect_url is None:
-                    redirect_url = bluemix_region
-                # Just in case, if there is no leading '/', add one
-                if redirect_url[0] != '/':
-                    redirect_url = '/%s' % redirect_url
-                # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
-                # redirect URL. Otherwise, something went wrong, return a 403.
-                try:
-                    authorization_header = bluemix_auth('https://%s' % bluemix_region, userid=username, password=password)
-                    if authorization_header is not None:
-                        session[bluemix_region] = authorization_header
-                        return redirect(redirect_url)
-                    else:
-                        return display_error_page(403, log_message='Username: \'%s\'.' % username)
-                except Exception as e:
-                    return display_error_page(403, log_message='Username: \'%s\'.' % username)
+            return display_error_page(403, log_message='Username: \'%s\'.' % username)
+    except Exception as e:
+        return display_error_page(403, log_message='Username: \'%s\'.' % username)
 
 port = os.getenv('PORT', PORT)
 # This secret key is to encode the Flask session object
