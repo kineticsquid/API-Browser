@@ -266,7 +266,7 @@ def force_https():
     # redirect if we're running in Bluemix because it'll fail running locally
     if request.endpoint in app.view_functions and not request.is_secure and vcap_application is not None:
         new_url = request.url.replace('http://', 'https://')
-        logger.info('Redirecting from %s to %s. Value of request.is_secure: %s.' % (request.url, new_url, request.is_Secure))
+        logger.info('Redirecting from %s to %s. Value of request.is_secure: %s.' % (request.url, new_url, request.is_secure))
         return redirect(new_url)
 
 
