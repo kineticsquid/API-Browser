@@ -202,27 +202,77 @@ def add_links(json_results, region):
         i += 1
     return json_results
 
+
+"""
+Method to check for referrer header to prevent someone from going directly to the login url. We want them to come from 
+the main page and click one of the links there. Slightly separate logic for running locally vs in Bluemix. Note in
+both cases the server address is 0.0.0.0. Presence of VCAP_APPLICATION environment variable indicates we're in
+Bluemix
+"""
+
+def check_referer(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        referer = request.environ.get('HTTP_REFERER', None)
+        if referer is None:
+            return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
+        if vcap_application is None:
+            server = request.environ.get('SERVER_NAME', None)
+            if server is None:
+                return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
+            else:
+                if server not in referer:
+                    return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (
+                    referer, server))
+        else:
+            uris = vcap_application.get('uris', None)
+            valid_referer = False
+            for uri in uris:
+                if uri.lower() in referer:
+                    valid_referer = True
+                    break
+            if not valid_referer:
+                return display_error_page(404, log_message='HTTP_REFERER not a valid URI: %s %s.' % (referer, uris))
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+"""
+Method to check to see if the user has authenticated to one of the regions
+"""
+
+def check_login(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        logged_in = False
+        for key in session.keys():
+            if key in BLUEMIX_REGIONS:
+                logged_in = True
+                break
+        if not logged_in:
+            return display_error_page(500, error_message='Ya gotta be logged in to try this.')
+        else:
+            return function(*args, **kwargs)
+
+    return wrapper
+
 """
 Method to force https when http is specified.
 """
 @app.before_request
 def force_https():
-    # We want to redirect the request to use https. X-Forwarded-Proto is only set in Bluemix runtime. We only want this
+    # We want to redirect the request to use https. We only want this
     # redirect if we're running in Bluemix because it'll fail running locally
-    url = request.url
-    if request.endpoint in app.view_functions:
-        forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
-        if forwarded_protocol is not None:
-            logger.info('Request: %s. X-Forwarded-Proto: %s' % (str(request.url), str(forwarded_protocol)))
-            if forwarded_protocol == 'http':
-                new_url = request.url.replace('http://', 'https://')
-                logger.info('Redirecting to %s.' % new_url)
-                return redirect(new_url)
+    if request.endpoint in app.view_functions and not request.is_secure and vcap_application is not None:
+        new_url = request.url.replace('http://', 'https://')
+        logger.info('Redirecting http request to %s.' % new_url)
+        return redirect(new_url)
 
 
 @app.errorhandler(Exception)
 def handle_bad_request(e):
-    display_error_page(e.status_code)
+    return display_error_page(500, error_message=str(e))
 
 @app.route('/')
 def Welcome():
@@ -231,14 +281,25 @@ def Welcome():
     return render_template('results.html', modalstyle='modal-hidden')
 
 @app.route('/test')
+# @check_login
 # Route for testing purposes only
 def Test():
-    output_string = '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
+    session_str = json.dumps(dict(session), indent=4)
+    u = request.url
+    a = request.authorization
+    r = request
+    output_string = '\nUrl: \n%s\n\nAuth: \n%s\n\nSession: \n%s\n\n' % (u, a, session_str)
+    output_string += '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
                     (json.dumps(vcap_services, indent=4), json.dumps(vcap_application, indent=4),
                      request.environ.get('HTTP_REFERER', None),
                      request.environ.get('SERVER_NAME', None))
     return render_template('test.html', content=output_string)
 
+@app.route('/error/<string:str>')
+@check_login
+# Route for testing error handler
+def Error(str):
+    raise Exception(str)
 
 @app.route('/<path:api_path>')
 def Handle_Everything_Else(api_path):
@@ -297,47 +358,13 @@ def Handle_Everything_Else(api_path):
                 else:
                     return display_error_page(404, log_message=str(e))
 
-"""
-Method to check for referrer header to prevent someone from going directly to the login url. We want them to come from 
-the main page and click one of the links there. Slightly separate logic for running locally vs in Bluemix. Note in
-both cases the server address is 0.0.0.0. Presence of VCAP_APPLICATION environment variable indicates we're in
-Bluemix
-"""
 
-def check_referer(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        referer = request.environ.get('HTTP_REFERER', None)
-        if referer is None:
-            return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
-        if vcap_application is None:
-            server = request.environ.get('SERVER_NAME', None)
-            if server is None:
-                return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
-            else:
-                if server not in referer:
-                    return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (
-                    referer, server))
-        else:
-            uris = vcap_application.get('uris', None)
-            valid_referer = False
-            for uri in uris:
-                if uri.lower() in referer:
-                    valid_referer = True
-                    break
-            if not valid_referer:
-                return display_error_page(404, log_message='HTTP_REFERER not a valid URI: %s %s.' % (referer, uris))
-        return function(*args, **kwargs)
-
-    return wrapper
-
-
-@app.route('/login')
+@app.route('/login', methods=['POST'])
 @check_referer
 def Login():
-    username = request.args[USERNAME_KEY]
-    password = request.args[PASSWORD_KEY]
-    bluemix_region = request.args[REGION_KEY]
+    username = request.form[USERNAME_KEY]
+    password = request.form[PASSWORD_KEY]
+    bluemix_region = request.form[REGION_KEY]
     # get the redirect URL. If none, make it the main page for a region
     redirect_url = request.args.get(REDIRECT_KEY, None)
     if redirect_url is None:
