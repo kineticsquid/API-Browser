@@ -264,10 +264,12 @@ Method to force https when http is specified.
 def force_https():
     # We want to redirect the request to use https. We only want this
     # redirect if we're running in Bluemix because it'll fail running locally
-    if request.endpoint in app.view_functions and not request.is_secure and vcap_application is not None:
-        new_url = request.url.replace('http://', 'https://')
-        logger.info('Redirecting from %s to %s. Value of request.is_secure: %s.' % (request.url, new_url, request.is_secure))
-        return redirect(new_url)
+    if request.endpoint in app.view_functions:
+        forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
+        if forwarded_protocol == 'http':
+            new_url = request.url.replace('http://', 'https://')
+            logger.info('Redirecting from %s to %s. Value of request.is_secure: %s.' % (request.url, new_url, request.is_secure))
+            return redirect(new_url)
 
 
 @app.errorhandler(Exception)
