@@ -16,6 +16,7 @@ from flask import Flask, request, render_template, make_response, session, redir
 from functools import wraps
 
 
+
 app = Flask(__name__)
 
 PORT = '5000'
@@ -268,7 +269,7 @@ def force_https():
         forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
         if forwarded_protocol == 'http':
             new_url = request.url.replace('http://', 'https://')
-            logger.info('Redirecting from %s to %s. Value of request.is_secure: %s.' % (request.url, new_url, request.is_secure))
+            logger.info('Redirecting from %s to %s.' % (request.url, new_url))
             return redirect(new_url)
 
 
