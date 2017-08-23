@@ -31,3 +31,6 @@ as HTTP. the $WSSC header value specifies the protocol specified by the user.
 
 Primer on Python decorators:
 https://realpython.com/blog/python/primer-on-python-decorators/
+
+Info on connection to Redis from Python:
+https://github.com/andymccurdy/redis-py

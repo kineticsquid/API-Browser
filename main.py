@@ -14,8 +14,7 @@ import random
 import requests
 from flask import Flask, request, render_template, make_response, session, redirect
 from functools import wraps
-
-
+import redis
 
 app = Flask(__name__)
 
@@ -33,18 +32,23 @@ BLUEMIX_REGIONS = ['api.ng.bluemix.net',
 """
 Custom exception to surface HTTP status codes
 """
+
+
 class AppHTTPError(Exception):
     def __init__(self, code, message):
         self.code = code
         self.message = message
+
     def __str__(self):
-        return repr('%s - %s' % (self.code,self.message))
+        return repr('%s - %s' % (self.code, self.message))
+
 
 """
 Method to define and return a logger for logging
 """
 import logging
 import sys
+
 
 def get_my_logger():
     logger = logging.getLogger('My Logger')
@@ -58,9 +62,12 @@ def get_my_logger():
 
     return logger
 
+
 """
 Method to display an error page given various errors
 """
+
+
 def display_error_page(error, **kwargs):
     error_message = kwargs.get('error_message', None)
     log_message = kwargs.get('log_message', None)
@@ -78,13 +85,15 @@ def display_error_page(error, **kwargs):
         image_file = 'any_error.jpeg'
     if log_message is None:
         log_message = error_message
-    logger.info('Error %s: %s' % (str(error),log_message))
+    logger.info('Error %s: %s' % (str(error), log_message))
     return render_template('error.html', image_file=image_file, error_message=error_message)
 
 
 """
 Routine to generate the secret key needed to use the Flask session object
 """
+
+
 def generate_secret_key():
     secret_key = ''
     for i in range(0, 50):
@@ -96,6 +105,7 @@ def generate_secret_key():
 """
 Routine to authenticate to Bluemix using IBMid, returns a bearer token
 """
+
 
 def bluemix_auth(bluemix_api_endpoint, **kwargs):
     global AUTHORIZATION_HEADER_KEY
@@ -145,9 +155,11 @@ def bluemix_auth(bluemix_api_endpoint, **kwargs):
     else:
         raise AppHTTPError(response.status_code, 'Error getting bearer token: %s' % response.content)
 
+
 """
 Routine to get all results from a Bluemix CF API call by handling paging
 """
+
 
 def get_all_bluemix_results(url, http_headers):
     all_results = []
@@ -171,12 +183,15 @@ def get_all_bluemix_results(url, http_headers):
                 url = None
         else:
             raise AppHTTPError(response.status_code, 'Error getting results from %s: %s' %
-                            (url, response.content))
+                               (url, response.content))
     return all_results
+
 
 """
 Method to transform JSON results to a formatted string, including hrefs for display using <pre> tags
 """
+
+
 def get_disp_content(api_results, region):
     if len(api_results) == 1:
         output = '%s result:\n\n' % str(len(api_results))
@@ -188,9 +203,11 @@ def get_disp_content(api_results, region):
         output += displayable_content_with_links
     return output
 
+
 """
 Routine to add href links to URLs enbedded in the JSON returned nby the CF api. 
 """
+
 
 def add_links(json_results, region):
     api_url_regex = '\"\/v2\/\S+\"'
@@ -203,6 +220,33 @@ def add_links(json_results, region):
         i += 1
     return json_results
 
+"""
+Method to initialize Redis instance for use. Different behavior depending on whether or not we're running in Bluemix
+"""
+def set_up_redis(redis_bluemix_credentials):
+    logger.info('Bluemix Redis credentials:')
+    logger.info(redis_bluemix_credentials)
+    redis_service = None
+    if redis_bluemix_credentials is not None:
+        try:
+            r = redis.StrictRedis(host='bluemix-sandbox-dal-9-portal.5.dblayer.com', port=29367, db=0, password='NAJTQEDGVFXPCVVQ')
+            if r.set('test', 'test'):
+                redis_service = r
+        except Exception as e:
+            logger.info('We have bluemix credemtials, but Bluemix Redis service appears to be down.')
+    if redis_service is None:
+        logger.info('using alternate Redis')
+        try:
+            r = redis.StrictRedis(host='redis-16909.c15.us-east-1-4.ec2.cloud.redislabs.com', port=16909, db=0,
+                              password='n7U3hWxMbFrD')
+            if r.set('test', 'test'):
+                redis_service = r
+        except Exception as e:
+            logger.info('Alternate Redis unavailable')
+    return redis_service
+
+
+
 
 """
 Method to check for referrer header to prevent someone from going directly to the login url. We want them to come from 
@@ -210,6 +254,7 @@ the main page and click one of the links there. Slightly separate logic for runn
 both cases the server address is 0.0.0.0. Presence of VCAP_APPLICATION environment variable indicates we're in
 Bluemix
 """
+
 
 def check_referer(function):
     @wraps(function)
@@ -224,7 +269,7 @@ def check_referer(function):
             else:
                 if server not in referer:
                     return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (
-                    referer, server))
+                        referer, server))
         else:
             uris = vcap_application.get('uris', None)
             valid_referer = False
@@ -243,6 +288,7 @@ def check_referer(function):
 Method to check to see if the user has authenticated to one of the regions
 """
 
+
 def check_login(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
@@ -258,9 +304,12 @@ def check_login(function):
 
     return wrapper
 
+
 """
 Method to force https when http is specified.
 """
+
+
 @app.before_request
 def force_https():
     # We want to redirect the request to use https. We only want this
@@ -277,11 +326,14 @@ def force_https():
 def handle_bad_request(e):
     return display_error_page(500, error_message=str(e))
 
+
 @app.route('/')
 def Welcome():
     # todo: Replace Flask session with Redis use - question on dw answers
     # todo: Once we have Redis in place, spin up multiple instances and test
+    # todo: test with different simultaneous users
     return render_template('results.html', modalstyle='modal-hidden')
+
 
 @app.route('/test')
 # @check_login
@@ -292,17 +344,20 @@ def Test():
     a = request.authorization
     r = request
     output_string = '\nUrl: \n%s\n\nAuth: \n%s\n\nSession: \n%s\n\n' % (u, a, session_str)
-    output_string += '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
-                    (json.dumps(vcap_services, indent=4), json.dumps(vcap_application, indent=4),
-                     request.environ.get('HTTP_REFERER', None),
-                     request.environ.get('SERVER_NAME', None))
+    output_string += '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nVCAP_CONFIG: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
+                     (json.dumps(vcap_services, indent=4), json.dumps(vcap_application, indent=4),
+                      json.dumps(vcap_config, indent=4),
+                      request.environ.get('HTTP_REFERER', None),
+                      request.environ.get('SERVER_NAME', None))
     return render_template('test.html', content=output_string)
+
 
 @app.route('/error/<string:str>')
 @check_login
 # Route for testing error handler
 def Error(str):
     raise Exception(str)
+
 
 @app.route('/<path:api_path>')
 def Handle_Everything_Else(api_path):
@@ -349,7 +404,7 @@ def Handle_Everything_Else(api_path):
             bearer_token = session[region]['Authorization']
             api_url = 'https://%s' % api
             try:
-                api_results = get_all_bluemix_results(api_url, { 'Authorization': bearer_token})
+                api_results = get_all_bluemix_results(api_url, {'Authorization': bearer_token})
                 displayable_content_with_links = get_disp_content(api_results, region)
                 page = render_template('results.html', title=api, region=region, content=displayable_content_with_links,
                                        modalstyle='modal-hidden')
@@ -387,9 +442,12 @@ def Login():
     except Exception as e:
         return display_error_page(403, log_message='Username: \'%s\'.' % username)
 
+
 port = os.getenv('PORT', PORT)
 # This secret key is to encode the Flask session object
 app.secret_key = generate_secret_key()
+app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
+
 logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
@@ -403,12 +461,30 @@ if vcap_application is not None:
     log.setLevel(logging.INFO)
 else:
     logger.info('No VCAP_APPLICATION environment variable')
+
 vcap_services = os.getenv('VCAP_SERVICES')
 if vcap_services is not None:
     vcap_services = json.loads(vcap_services)
     logger.info('VCAP_SERVICES:')
     logger.info(json.dumps(vcap_services, indent=4))
+    redis_instances = vcap_services.get('compose-for-redis', None)
+    if redis_instances is None:
+        logger.info('No redis instance in VCAP_Services.')
+        redis_bluemix_credentials = None
+    else:
+        redis_bluemix_credentials = redis_instances[0]['credentials']
 else:
     logger.info('No VCAP_SERVICES environment variable')
+    redis_bluemix_credentials = None
+
+redis_service = set_up_redis(redis_bluemix_credentials)
+if redis_service is None:
+    raise AppHTTPError(500, 'No Redis service available')
+
+vcap_config = os.getenv('VCAP_CONFIG')
+if vcap_config is not None:
+    vcap_config = json.loads(vcap_config)
+    logger.info('VCAP_CONFIG:')
+    logger.info(json.dumps(vcap_config, indent=4))
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))
