@@ -15,6 +15,7 @@ import requests
 from flask import Flask, request, render_template, make_response, session, redirect
 from functools import wraps
 import redis
+import re
 
 app = Flask(__name__)
 
@@ -224,16 +225,23 @@ def add_links(json_results, region):
 Method to initialize Redis instance for use. Different behavior depending on whether or not we're running in Bluemix
 """
 def set_up_redis(redis_bluemix_credentials):
-    logger.info('Bluemix Redis credentials:')
-    logger.info(redis_bluemix_credentials)
+    logger.info('Bluemix Redis credentials: %s' % redis_bluemix_credentials)
     redis_service = None
     if redis_bluemix_credentials is not None:
         try:
-            r = redis.StrictRedis(host='bluemix-sandbox-dal-9-portal.5.dblayer.com', port=29367, db=0, password='NAJTQEDGVFXPCVVQ')
+            regex_str = '(redis://admin:)(?P<password>\S+)(@)(?P<host>\S+)(:)(?P<port>\d+)'
+            regex = re.compile(regex_str)
+            uri = redis_bluemix_credentials['uri']
+            regex_results = regex.search(uri)
+            host = regex_results.group('host')
+            password = regex_results.group('password')
+            port = regex_results.group('port')
+            logger.info('Authenticating to Redis with %s %s %s' %s (host, port, password))
+            r = redis.StrictRedis(host=host, port=int(port), db=0, password=password)
             if r.set('test', 'test'):
                 redis_service = r
         except Exception as e:
-            logger.info('We have bluemix credemtials, but Bluemix Redis service appears to be down.')
+            logger.info('We have bluemix credemtials, but Bluemix Redis service appears to be down or credentials we bad.')
     if redis_service is None:
         logger.info('using alternate Redis')
         try:
@@ -453,8 +461,7 @@ logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
 if vcap_application is not None:
     vcap_application = json.loads(vcap_application)
-    logger.info('VCAP_APPLICATION:')
-    logger.info(json.dumps(vcap_application, indent=4))
+    logger.info('VCAP_APPLICATION: %s' % vcap_application)
     # these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
     # Bluemix logs. Only set this if running in Bluemix and not locally
     log = logging.getLogger('werkzeug')
@@ -465,8 +472,7 @@ else:
 vcap_services = os.getenv('VCAP_SERVICES')
 if vcap_services is not None:
     vcap_services = json.loads(vcap_services)
-    logger.info('VCAP_SERVICES:')
-    logger.info(json.dumps(vcap_services, indent=4))
+    logger.info('VCAP_SERVICES: %s' % vcap_services)
     redis_instances = vcap_services.get('compose-for-redis', None)
     if redis_instances is None:
         logger.info('No redis instance in VCAP_Services.')
@@ -484,7 +490,6 @@ if redis_service is None:
 vcap_config = os.getenv('VCAP_CONFIG')
 if vcap_config is not None:
     vcap_config = json.loads(vcap_config)
-    logger.info('VCAP_CONFIG:')
-    logger.info(json.dumps(vcap_config, indent=4))
+    logger.info('VCAP_CONFIG: %s' % vcap_config)
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))
