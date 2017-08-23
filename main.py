@@ -236,7 +236,7 @@ def set_up_redis(redis_bluemix_credentials):
             host = regex_results.group('host')
             password = regex_results.group('password')
             port = regex_results.group('port')
-            logger.info('Authenticating to Redis with %s %s %s' %s (host, port, password))
+            logger.info('Authenticating to Redis with %s %s %s' % (host, port, password))
             r = redis.StrictRedis(host=host, port=int(port), db=0, password=password)
             if r.set('test', 'test'):
                 redis_service = r
