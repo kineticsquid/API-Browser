@@ -25,6 +25,7 @@ PASSWORD_KEY = 'password'
 REGION_KEY = 'region'
 REDIRECT_KEY = 'redirect'
 AUTHORIZATION_HEADER_KEY = 'Authorization'
+REDIS_KEY_FOR_SECRET_KEY = 'secret_key'
 BLUEMIX_REGIONS = ['api.ng.bluemix.net',
                    'api.eu-gb.bluemix.net',
                    'api.eu-de.bluemix.net',
@@ -95,12 +96,13 @@ Routine to generate the secret key needed to use the Flask session object
 """
 
 
-def generate_secret_key():
-    secret_key = ''
+def get_secret_key(redis_service):
+    potential_secret_key = ''
     for i in range(0, 50):
         char = chr(random.randint(0, 255))
-        secret_key += char
-    return secret_key
+        potential_secret_key += char
+    redis_service.setnx(REDIS_KEY_FOR_SECRET_KEY, potential_secret_key)
+    return redis_service.get(REDIS_KEY_FOR_SECRET_KEY)
 
 
 """
@@ -236,19 +238,21 @@ def set_up_redis(redis_bluemix_credentials):
             host = regex_results.group('host')
             password = regex_results.group('password')
             port = regex_results.group('port')
-            logger.info('Authenticating to Redis with %s %s %s' % (host, port, password))
             r = redis.StrictRedis(host=host, port=int(port), db=0, password=password)
             if r.set('test', 'test'):
                 redis_service = r
+                logger.info('Authenticated to Redis at %s.' % host)
         except Exception as e:
             logger.info('We have bluemix credemtials, but Bluemix Redis service appears to be down or credentials we bad.')
     if redis_service is None:
-        logger.info('using alternate Redis')
+        logger.info('Using alternate Redis')
         try:
-            r = redis.StrictRedis(host='redis-16909.c15.us-east-1-4.ec2.cloud.redislabs.com', port=16909, db=0,
+            alternate_redis_host = 'redis-16909.c15.us-east-1-4.ec2.cloud.redislabs.com'
+            r = redis.StrictRedis(host=alternate_redis_host, port=16909, db=0,
                               password='n7U3hWxMbFrD')
             if r.set('test', 'test'):
                 redis_service = r
+                logger.info('Authenticated to Redis at %s.' % alternate_redis_host)
         except Exception as e:
             logger.info('Alternate Redis unavailable')
     return redis_service
@@ -357,6 +361,7 @@ def Test():
                       json.dumps(vcap_config, indent=4),
                       request.environ.get('HTTP_REFERER', None),
                       request.environ.get('SERVER_NAME', None))
+    output_string += '\nSecret key for session: %s\n' % app.secret_key
     return render_template('test.html', content=output_string)
 
 
@@ -452,10 +457,6 @@ def Login():
 
 
 port = os.getenv('PORT', PORT)
-# This secret key is to encode the Flask session object
-app.secret_key = generate_secret_key()
-app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
-
 logger = get_my_logger()
 logger.info('Starting....')
 vcap_application = os.getenv('VCAP_APPLICATION')
@@ -483,13 +484,17 @@ else:
     logger.info('No VCAP_SERVICES environment variable')
     redis_bluemix_credentials = None
 
-redis_service = set_up_redis(redis_bluemix_credentials)
-if redis_service is None:
-    raise AppHTTPError(500, 'No Redis service available')
-
 vcap_config = os.getenv('VCAP_CONFIG')
 if vcap_config is not None:
     vcap_config = json.loads(vcap_config)
     logger.info('VCAP_CONFIG: %s' % vcap_config)
+
+redis_service = set_up_redis(redis_bluemix_credentials)
+if redis_service is None:
+    raise AppHTTPError(500, 'No Redis service available')
+else:
+    app.secret_key = get_secret_key(redis_service)
+    # app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))

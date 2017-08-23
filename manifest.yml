@@ -1,7 +1,7 @@
 applications:
 - path: .
   memory: 1024M
-  instances: 1
+  instances: 4
   domain: mybluemix.net
   name: CF-API-Browser
   host: CF-API-Browser
