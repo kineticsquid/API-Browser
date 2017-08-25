@@ -8,7 +8,6 @@ See readme.md
 Setting FLASK_DEBUG=1 environment variable to enable debugging and auto reloading of changed files
 """
 import json
-import re
 import os
 import random
 import requests
@@ -16,10 +15,12 @@ from flask import Flask, request, render_template, make_response, session, redir
 from functools import wraps
 import redis
 import re
+from datetime import timedelta
 
 app = Flask(__name__)
 
 PORT = '5000'
+SESSION_EXPIRATION_IN_SECONDS = 10
 USERNAME_KEY = 'username'
 PASSWORD_KEY = 'password'
 REGION_KEY = 'region'
@@ -324,9 +325,13 @@ Method to force https when http is specified.
 
 @app.before_request
 def force_https():
-    # We want to redirect the request to use https. We only want this
-    # redirect if we're running in Bluemix because it'll fail running locally
+    # This runs before each request is processed. We want to do two things here.
+    #   - First to set the session cookie to be permanent. This in combination with use of
+    #     app.permanent_session_lifetime causes the session cookie to expire after 1 hour of non-use.
+    #   - We want to redirect all requests to use https. We only want this redirect if we're running in Bluemix
+    #     because it'll fail running locally
     if request.endpoint in app.view_functions:
+        session.permanent = True
         forwarded_protocol = request.headers.get('X-Forwarded-Proto', None)
         if forwarded_protocol == 'http':
             new_url = request.url.replace('http://', 'https://')
@@ -348,7 +353,7 @@ def Welcome():
 
 
 @app.route('/test')
-# @check_login
+@check_login
 # Route for testing purposes only
 def Test():
     session_str = json.dumps(dict(session), indent=4)
@@ -489,12 +494,17 @@ if vcap_config is not None:
     vcap_config = json.loads(vcap_config)
     logger.info('VCAP_CONFIG: %s' % vcap_config)
 
+# We're using Redis to hold the app secret key (used to encode session cookie information. This is so when we are
+# running multiple instances of the app, they all use the same key. Redis "setnx" assures this.
 redis_service = set_up_redis(redis_bluemix_credentials)
 if redis_service is None:
     raise AppHTTPError(500, 'No Redis service available')
 else:
-    app.secret_key = get_secret_key(redis_service)
     # app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
+    app.secret_key = get_secret_key(redis_service)
+
+# Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
+app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))
