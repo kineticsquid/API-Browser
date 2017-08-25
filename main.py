@@ -20,7 +20,7 @@ from datetime import timedelta
 app = Flask(__name__)
 
 PORT = '5000'
-SESSION_EXPIRATION_IN_SECONDS = 10
+SESSION_EXPIRATION_IN_SECONDS = 3600
 USERNAME_KEY = 'username'
 PASSWORD_KEY = 'password'
 REGION_KEY = 'region'
