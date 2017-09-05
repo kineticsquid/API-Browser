@@ -209,7 +209,7 @@ def get_disp_content(api_results, region):
 
 
 """
-Routine to add href links to URLs enbedded in the JSON returned nby the CF api. 
+Routine to add href links to URLs embedded in the JSON returned nby the CF api. 
 """
 
 
