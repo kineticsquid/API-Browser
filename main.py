@@ -93,20 +93,6 @@ def display_error_page(error, **kwargs):
 
 
 """
-Routine to generate the secret key needed to use the Flask session object
-"""
-
-
-def get_secret_key(redis_service):
-    potential_secret_key = ''
-    for i in range(0, 50):
-        char = chr(random.randint(0, 255))
-        potential_secret_key += char
-    redis_service.setnx(REDIS_KEY_FOR_SECRET_KEY, potential_secret_key)
-    return redis_service.get(REDIS_KEY_FOR_SECRET_KEY)
-
-
-"""
 Routine to authenticate to Bluemix using IBMid, returns a bearer token
 """
 
@@ -223,42 +209,6 @@ def add_links(json_results, region):
         json_results = json_results.replace(match, href)
         i += 1
     return json_results
-
-"""
-Method to initialize Redis instance for use. Different behavior depending on whether or not we're running in Bluemix
-"""
-def set_up_redis(redis_bluemix_credentials):
-    logger.info('Bluemix Redis credentials: %s' % redis_bluemix_credentials)
-    redis_service = None
-    if redis_bluemix_credentials is not None:
-        try:
-            regex_str = '(redis://admin:)(?P<password>\S+)(@)(?P<host>\S+)(:)(?P<port>\d+)'
-            regex = re.compile(regex_str)
-            uri = redis_bluemix_credentials['uri']
-            regex_results = regex.search(uri)
-            host = regex_results.group('host')
-            password = regex_results.group('password')
-            port = regex_results.group('port')
-            r = redis.StrictRedis(host=host, port=int(port), db=0, password=password)
-            if r.set('test', 'test'):
-                redis_service = r
-                logger.info('Authenticated to Redis at %s.' % host)
-        except Exception as e:
-            logger.info('We have bluemix credemtials, but Bluemix Redis service appears to be down or credentials we bad.')
-    if redis_service is None:
-        logger.info('Using alternate Redis')
-        try:
-            alternate_redis_host = 'redis-16909.c15.us-east-1-4.ec2.cloud.redislabs.com'
-            r = redis.StrictRedis(host=alternate_redis_host, port=16909, db=0,
-                              password='n7U3hWxMbFrD')
-            if r.set('test', 'test'):
-                redis_service = r
-                logger.info('Authenticated to Redis at %s.' % alternate_redis_host)
-        except Exception as e:
-            logger.info('Alternate Redis unavailable')
-    return redis_service
-
-
 
 
 """
@@ -476,32 +426,11 @@ else:
     logger.info('No VCAP_APPLICATION environment variable')
 
 vcap_services = os.getenv('VCAP_SERVICES')
-if vcap_services is not None:
-    vcap_services = json.loads(vcap_services)
-    logger.info('VCAP_SERVICES: %s' % vcap_services)
-    redis_instances = vcap_services.get('compose-for-redis', None)
-    if redis_instances is None:
-        logger.info('No redis instance in VCAP_Services.')
-        redis_bluemix_credentials = None
-    else:
-        redis_bluemix_credentials = redis_instances[0]['credentials']
-else:
-    logger.info('No VCAP_SERVICES environment variable')
-    redis_bluemix_credentials = None
 
 vcap_config = os.getenv('VCAP_CONFIG')
 if vcap_config is not None:
     vcap_config = json.loads(vcap_config)
     logger.info('VCAP_CONFIG: %s' % vcap_config)
-
-# We're using Redis to hold the app secret key (used to encode session cookie information. This is so when we are
-# running multiple instances of the app, they all use the same key. Redis "setnx" assures this.
-redis_service = set_up_redis(redis_bluemix_credentials)
-if redis_service is None:
-    raise AppHTTPError(500, 'No Redis service available')
-else:
-    # app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
-    app.secret_key = get_secret_key(redis_service)
 
 # Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
 app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
