@@ -9,11 +9,9 @@ Setting FLASK_DEBUG=1 environment variable to enable debugging and auto reloadin
 """
 import json
 import os
-import random
 import requests
 from flask import Flask, request, render_template, make_response, session, redirect
 from functools import wraps
-import redis
 import re
 from datetime import timedelta
 
@@ -26,7 +24,6 @@ PASSWORD_KEY = 'password'
 REGION_KEY = 'region'
 REDIRECT_KEY = 'redirect'
 AUTHORIZATION_HEADER_KEY = 'Authorization'
-REDIS_KEY_FOR_SECRET_KEY = 'secret_key'
 BLUEMIX_REGIONS = ['api.ng.bluemix.net',
                    'api.eu-gb.bluemix.net',
                    'api.eu-de.bluemix.net',
@@ -434,6 +431,7 @@ if vcap_config is not None:
 
 # Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
 app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
+app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(port))

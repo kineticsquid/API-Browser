@@ -7,5 +7,3 @@ applications:
   host: CF-API-Browser
   disk_quota: 1024M
   buildpack: python_buildpack
-  services:
-    - Compose-for-Redis-for-CF-API-Browser
