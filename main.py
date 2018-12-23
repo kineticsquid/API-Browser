@@ -222,23 +222,6 @@ def check_referer(function):
         referer = request.environ.get('HTTP_REFERER', None)
         if referer is None:
             return display_error_page(404, log_message='Attempt to login with no HTTP_REFERER.')
-        if vcap_application is None:
-            server = request.environ.get('SERVER_NAME', None)
-            if server is None:
-                return display_error_page(404, log_message='Attempt to login with no SERVER_NAME.')
-            else:
-                if server not in referer:
-                    return display_error_page(404, log_message='HTTP_REFERER and SERVER_NAME do not match: %s %s.' % (
-                        referer, server))
-        else:
-            uris = vcap_application.get('uris', None)
-            valid_referer = False
-            for uri in uris:
-                if uri.lower() in referer:
-                    valid_referer = True
-                    break
-            if not valid_referer:
-                return display_error_page(404, log_message='HTTP_REFERER not a valid URI: %s %s.' % (referer, uris))
         return function(*args, **kwargs)
 
     return wrapper
@@ -293,9 +276,6 @@ def handle_bad_request(e):
 
 @app.route('/')
 def Welcome():
-    # todo: Replace Flask session with Redis use - question on dw answers
-    # todo: Once we have Redis in place, spin up multiple instances and test
-    # todo: test with different simultaneous users
     return render_template('results.html', modalstyle='modal-hidden')
 
 
@@ -308,10 +288,7 @@ def Test():
     a = request.authorization
     r = request
     output_string = '\nUrl: \n%s\n\nAuth: \n%s\n\nSession: \n%s\n\n' % (u, a, session_str)
-    output_string += '\nVCAP_SERVICES: \n%s\n\nVCAP_APPLICATION: \n%s\n\nVCAP_CONFIG: \n%s\n\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % \
-                     (json.dumps(vcap_services, indent=4), json.dumps(vcap_application, indent=4),
-                      json.dumps(vcap_config, indent=4),
-                      request.environ.get('HTTP_REFERER', None),
+    output_string += '\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % (request.environ.get('HTTP_REFERER', None),
                       request.environ.get('SERVER_NAME', None))
     output_string += '\nSecret key for session: %s\n' % app.secret_key
     return render_template('test.html', content=output_string)
@@ -326,6 +303,7 @@ def Error(str):
 
 @app.route('/<path:api_path>')
 def Handle_Everything_Else(api_path):
+    logger.info("Request: api_path: %s" % api_path)
     # regex to recognize a Bluemix API domain
     region_regex = 'api\.\S*\.bluemix\.net'
     re_region = re.compile(region_regex)
@@ -345,7 +323,7 @@ def Handle_Everything_Else(api_path):
         api = api_hits.group()
     else:
         api = None
-
+    logger.info('Region: %s\nAPI request: %s\nSession: %s' % (region, api, session.keys()))
     # if we don't find the region in the session object, it means that the user is not authenticated to this region.
     # In which case, cause the login modal prompt to be displayed and set the redirect
     if region not in session:
@@ -411,23 +389,6 @@ def Login():
 port = os.getenv('PORT', PORT)
 logger = get_my_logger()
 logger.info('Starting....')
-vcap_application = os.getenv('VCAP_APPLICATION')
-if vcap_application is not None:
-    vcap_application = json.loads(vcap_application)
-    logger.info('VCAP_APPLICATION: %s' % vcap_application)
-    # these next two statements set logging level of the logger in Flask so that messages don't show up as errors in the
-    # Bluemix logs. Only set this if running in Bluemix and not locally
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.INFO)
-else:
-    logger.info('No VCAP_APPLICATION environment variable')
-
-vcap_services = os.getenv('VCAP_SERVICES')
-
-vcap_config = os.getenv('VCAP_CONFIG')
-if vcap_config is not None:
-    vcap_config = json.loads(vcap_config)
-    logger.info('VCAP_CONFIG: %s' % vcap_config)
 
 # Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
 app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
