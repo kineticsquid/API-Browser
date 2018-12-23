@@ -2,6 +2,10 @@
 
 Simple Python application using Flask to allow one to browse artifacts in a Bluemix account using the CF API. Authentication is through IBMid.
 
+Current URL: []http://169.61.113.149:31788/](http://169.61.113.149:31788/)
+
+Run command `kubectl describe service cf-api-browser` to get IP (public Nodeport)
+
 
 [CF API documentation](https://apidocs.cloudfoundry.org/)
 
