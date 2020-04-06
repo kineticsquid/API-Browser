@@ -2,13 +2,16 @@
 <html>
 
 <head>
-    <title>Cloud Foundry API Navigator</title>
+    <title>IBM Cloud API Navigator</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/static/stylesheets/style.css">
-    <link rel="shortcut icon" href="/static/images/favicon-32x32.png">
-    <link rel="icon" href="/static/images/favicon-32x32.png">
+    <link rel="stylesheet" href="{{url_root}}/static/stylesheets/style.css">
+    <link rel="shortcut icon" href="{{url_root}}/static/images/favicon-32x32.png">
+    <link rel="icon" href="{{url_root}}/static/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{url_root}}/static/images/apple-touch-icon152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{url_root}}/static/images/apple-touch-icon180x180.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{url_root}}/static/images/apple-touch-icon192x192.png">
 </head>
 
 <body>
@@ -16,14 +19,12 @@
 
 <div align="center">
     <form>
-        <input type="button" value="api.ng.bluemix.net" class="region-button"
-               onclick="window.location.href='/api.ng.bluemix.net'"/>
-        <input type="button" value="api.eu-gb.bluemix.net" class="region-button"
-               onclick="window.location.href='/api.eu-gb.bluemix.net'"/>
-        <input type="button" value="api.au-de.bluemix.net" class="region-button"
-               onclick="window.location.href='/api.eu-de.bluemix.net'"/>
-        <input type="button" value="api.au-syd.bluemix.net" class="region-button"
-               onclick="window.location.href='/api.au-syd.bluemix.net'"/>
+        <input type="button" value="cloud.ibm.com" class="domain-button"
+               onclick="window.location.href='{{url_root}}/resource-controller.cloud.ibm.com'"/>
+        <input type="button" value="test.cloud.ibm.com" class="domain-button"
+               onclick="window.location.href='{{url_root}}/resource-controller.test.cloud.ibm.com'"/>
+        <input type="button" value="Logout" class="domain-button"
+               onclick="window.location.href='{{url_root}}/logout'"/>
     </form>
 </div>
 
@@ -43,27 +44,23 @@
 <div id="id01" class="{{ modalstyle }}">
 
     <!-- Modal Content -->
-    <form class="modal-content" method="post" action="/login">
+    <form class="modal-content" method="post" action="{{url_root}}/login">
         <div class="imgcontainer">
-            <img src="/static/images/watson-logo-2017.png" alt="IBM Watson Logo" class="avatar">
+            <img src="{{url_root}}/static/images/watson-logo-2017.png" alt="IBM Watson Logo" class="avatar">
         </div>
 
         <div class="modal-text">
-            {{ region }}
+            {{ domain }}
         </div>
 
         <div class="container">
-            <input type="text" placeholder="Bluemix Username or 'apikey'" name="username" autofocus="autofocus" required alt="Bluemix Username or 'apikey' ">
-            <input type="password" placeholder="Bluemix Password or apikey" name="password" required alt="Bluemix Password or apikey">
             <input type="hidden" value="{{ redirect }}" name="redirect">
-            <input type="hidden" value="{{ region }}" name="region">
+            <input type="hidden" value="{{ domain }}" name="domain">
+            <input type="password" placeholder="IBM Cloud account API Key" name="api_key" required alt="IBM Cloud account API Key" autofocus>
         </div>
 
-        <div class="container" style="background-color:#f1f1f1">
+        <div class="container">
             <button type="submit" class="login-button">Login</button>
-            <button type="button" class="login-button" onclick="document.getElementById('id01').style.display='none'">
-                Cancel
-            </button>
         </div>
     </form>
 </div>

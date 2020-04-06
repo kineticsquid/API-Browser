@@ -23,8 +23,6 @@ body,html {
 	height: 100%;
 	margin-top: 10px;
 	margin-bottom: 20px;
-	margin-left: 20px;
-	margin-right: 20px;
 	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
 	color: #ffffff;
 }
@@ -47,6 +45,11 @@ a:hover {
 h1 {
 	/* font-weight: bold; */
 	font-size: 125%;
+	margin-left: 10%;
+}
+
+pre {
+	margin-left: 10%;
 }
 
 
@@ -101,9 +104,20 @@ input[type=text], input[type=password] {
     box-sizing: border-box;
 }
 
-/* Set a style for region select buttons */
-.region-button {
+/* Set a style for domain select buttons */
+.domain-button {
     padding: 5px;
+    margin: 10px;
+    border: 1px solid #999;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 15%;
+}
+
+/* Set a style for domain select buttons */
+.logout-button {
+    padding: 5px;
+    background-color: #AAAAAA;
     margin: 10px;
     border: 1px solid #999;
     cursor: pointer;

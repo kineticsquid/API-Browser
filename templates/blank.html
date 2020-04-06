@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>IBM Cloud API Navigator</title>
+    <title>{{title}}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,31 +14,8 @@
     <link rel="apple-touch-icon" sizes="192x192" href="{{url_root}}/static/images/apple-touch-icon192x192.png">
 </head>
 
-<body>
-
-<div align="center">
-    <form>
-        <input type="button" value="cloud.ibm.com" class="domain-button"
-               onclick="window.location.href='{{url_root}}/resource-controller.cloud.ibm.com'"/>
-        <input type="button" value="test.cloud.ibm.com" class="domain-button"
-               onclick="window.location.href='{{url_root}}/resource-controller.test.cloud.ibm.com'"/>
-        <input type="button" value="Logout" class="domain-button"
-               onclick="window.location.href='{{url_root}}/logout'"/>
-    </form>
-</div>
-
-<div>
-    <h1> Test </h1>
-</div>
-
-<hr>
-
-<div>
-    <pre>
-        {{ content }}
-    </pre>
-</div>
-
+<body style="font-size:20px;">
+<pre>{{ message }}</pre>
 </body>
 
 </html>

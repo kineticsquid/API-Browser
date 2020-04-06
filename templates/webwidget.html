@@ -15,28 +15,17 @@
 </head>
 
 <body>
-
+<h1>ASoC WebWidget Test</h1>
 <div align="center">
-    <form>
-        <input type="button" value="cloud.ibm.com" class="domain-button"
-               onclick="window.location.href='{{url_root}}/resource-controller.cloud.ibm.com'"/>
-        <input type="button" value="test.cloud.ibm.com" class="domain-button"
-               onclick="window.location.href='{{url_root}}/resource-controller.test.cloud.ibm.com'"/>
-        <input type="button" value="Logout" class="domain-button"
-               onclick="window.location.href='{{url_root}}/logout'"/>
-    </form>
-</div>
-
-<div>
-    <h1> Test </h1>
-</div>
-
-<hr>
-
-<div>
-    <pre>
-        {{ content }}
-    </pre>
+<script src="https://web-chat.global.assistant.watson.appdomain.cloud/loadWatsonAssistantChat.js"></script>
+<script>
+  window.loadWatsonAssistantChat({
+    integrationID: "c50b7dcd-e06d-4b33-90bd-63fc0a320633", // The ID of this integration.
+    region: "us-east" // The region your integration is hosted in.
+  }).then(function(instance){
+    instance.render();
+  });
+</script>
 </div>
 
 </body>
