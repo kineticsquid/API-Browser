@@ -251,6 +251,16 @@ def do_something_whenever_a_request_comes_in():
         logger.info('Url_root:\t%s' % request.url_root)
         logger.info('Scheme:\t%s' % request.scheme)
 
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['Content-Security-Policy'] = 'default-src \'self\' *.watson.appdomain.cloud fonts.gstatic.com \'unsafe-inline\'; connect-src *.watsonplatform.net *.watson.appdomain.cloud'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+
 @app.errorhandler(Exception)
 def handle_bad_request(e):
     return display_error_page(500, error_message=str(e))
@@ -281,26 +291,18 @@ def webwidget():
 
 @app.route('/echo', methods=['GET', 'POST'])
 def echo():
-    url = request.url
-    output = 'URL: %s\n\n' % url
-    form = request.form
-    for key in form.keys():
-        output = '%s\n%s - %s' % (output, key, form.get(key))
-    return render_template('blank.html', message=str(output), title='Echo Input', url_root=url_root)
-
-
-@app.route('/test')
-# Route for testing purposes only
-def Test():
     session_str = json.dumps(dict(session), indent=4)
     u = request.url
     a = request.authorization
-    r = request
     output_string = '\nUrl: \n%s\n\nAuth: \n%s\n\nSession: \n%s\n\n' % (u, a, session_str)
     output_string += '\nHTTP_REFERER: \n%s\n\nSERVER_NAME: \n%s\n' % (request.environ.get('HTTP_REFERER', None),
                                                                       request.environ.get('SERVER_NAME', None))
     output_string += '\nSecret key for session: %s\n' % app.secret_key
-    return render_template('test.html', content=output_string, url_root=url_root)
+    output_string = '%s\nRequest form key/values:' % output_string
+    form = request.form
+    for key in form.keys():
+        output_string = '%s\n%s - %s' % (output_string, key, form.get(key))
+    return render_template('blank.html', message=str(output_string), title='Echo Input', url_root=url_root)
 
 
 @app.route('/error/<string:str>')
