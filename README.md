@@ -1,4 +1,4 @@
-# CF API Browser
+# API Browser
 
 Simple Python application using Flask to allow one to browse artifacts in a Bluemix account using the CF API. Authentication is through IBMid.
 
