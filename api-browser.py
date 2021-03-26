@@ -242,14 +242,14 @@ def do_something_whenever_a_request_comes_in():
     if os.environ[API_BROWSER_DEBUG] == 'Y':
         logger.info("Api-browser request: %s" % url)
         logger.info('Referer:\t%s' % request.headers.get('Referer'))
-        logger.info('Environ:\t%s' % request.environ)
-        logger.info('Path:\t%s' % request.path)
-        logger.info('Full_path:\t%s' % request.full_path)
-        logger.info('Script_root:\t%s' % request.script_root)
-        logger.info('Url:\t%s' % request.url)
-        logger.info('Base_url:\t%s' % request.base_url)
-        logger.info('Url_root:\t%s' % request.url_root)
-        logger.info('Scheme:\t%s' % request.scheme)
+        # logger.info('Environ:\t%s' % request.environ)
+        # logger.info('Path:\t%s' % request.path)
+        # logger.info('Full_path:\t%s' % request.full_path)
+        # logger.info('Script_root:\t%s' % request.script_root)
+        # logger.info('Url:\t%s' % request.url)
+        # logger.info('Base_url:\t%s' % request.base_url)
+        # logger.info('Url_root:\t%s' % request.url_root)
+        # logger.info('Scheme:\t%s' % request.scheme)
 
 @app.after_request
 def add_header(response):
@@ -331,6 +331,7 @@ def Login():
         authorization_header = bluemix_auth(bluemix_domain, apikey)
         if authorization_header is not None:
             session[bluemix_domain] = authorization_header
+            print('Redirecting to %s' % redirect_url)
             return redirect(redirect_url)
         else:
             return display_error_page(403, log_message='Authentication error')
@@ -362,7 +363,6 @@ def login_for_apikeys_as_environment_variables():
                 return display_error_page(403, log_message='Authentication error')
         except Exception as e:
             return display_error_page(403, log_message='Authentication error')
-
 
 
 @app.route('/logout', methods=['POST', 'GET'])
