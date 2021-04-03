@@ -4,7 +4,6 @@ Define and use an APIKEY to access. Either specify at the login prompt or define
 Setting FLASK_DEBUG=1 environment variable to enable debugging and auto reloading of changed files
 """
 import json
-import logging
 import os
 import os.path
 import re
@@ -60,23 +59,6 @@ class AppHTTPError(Exception):
 
 
 """
-Method to define and return a logger for logging
-"""
-
-
-def get_my_logger():
-    logger = logging.getLogger('My Logger')
-    logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(message)s', "%H:%M:%S")
-    ch.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    return logger
-
-
-"""
 Method to display an error page given various errors
 """
 
@@ -98,7 +80,7 @@ def display_error_page(error, **kwargs):
         image_file = 'any_error.jpeg'
     if log_message is None:
         log_message = error_message
-    logger.info('Error %s: %s' % (str(error), log_message))
+    print('Error %s: %s' % (str(error), log_message))
     return render_template('error.html', image_file=image_file, error_message=error_message, url_root=url_root)
 
 
@@ -240,16 +222,16 @@ def check_referer(function):
 def do_something_whenever_a_request_comes_in():
     url = request.url
     if os.environ[API_BROWSER_DEBUG] == 'Y':
-        logger.info("Api-browser request: %s" % url)
-        logger.info('Referer:\t%s' % request.headers.get('Referer'))
-        # logger.info('Environ:\t%s' % request.environ)
-        # logger.info('Path:\t%s' % request.path)
-        # logger.info('Full_path:\t%s' % request.full_path)
-        # logger.info('Script_root:\t%s' % request.script_root)
-        # logger.info('Url:\t%s' % request.url)
-        # logger.info('Base_url:\t%s' % request.base_url)
-        # logger.info('Url_root:\t%s' % request.url_root)
-        # logger.info('Scheme:\t%s' % request.scheme)
+        print("Api-browser request: %s" % url)
+        print('Referer:\t%s' % request.headers.get('Referer'))
+        # print('Environ:\t%s' % request.environ)
+        # print('Path:\t%s' % request.path)
+        # print('Full_path:\t%s' % request.full_path)
+        # print('Script_root:\t%s' % request.script_root)
+        # print('Url:\t%s' % request.url)
+        # print('Base_url:\t%s' % request.base_url)
+        # print('Url_root:\t%s' % request.url_root)
+        # print('Scheme:\t%s' % request.scheme)
 
 @app.after_request
 def add_header(response):
@@ -439,13 +421,12 @@ def Handle_Everything_Else(request_path):
 port = os.getenv('PORT', '5000')
 
 if __name__ == "__main__":
-    logger = get_my_logger()
-    logger.info('Starting %s....' % sys.argv[0])
-    logger.info('Build: %s' % time.ctime(os.path.getmtime(sys.argv[0])))
-    logger.info('Python: ' + sys.version)
-    logger.info('Environment Variables:')
+    print('Starting %s....' % sys.argv[0])
+    print('Build: %s' % time.ctime(os.path.getmtime(sys.argv[0])))
+    print('Python: ' + sys.version)
+    print('Environment Variables:')
     for key in os.environ.keys():
-        logger.info('%s:\t%s' % (key, os.environ.get(key)))
+        print('%s:\t%s' % (key, os.environ.get(key)))
     # Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
     app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
     app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'

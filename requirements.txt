@@ -1,5 +1,3 @@
 Flask
-flask-sslify
 requests
 werkzeug
-pyOpenSSL

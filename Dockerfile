@@ -6,17 +6,6 @@ WORKDIR /app
 # Set this to fix a bug in c include files not being found
 ENV LIBRARY_PATH=/lib:/usr/lib
 
-RUN apk update \
-  && apk add gcc python3-dev musl-dev libffi-dev \
-# TODO workaround start
-  && apk del libressl-dev \
-  && apk add openssl-dev \
-  && pip install cryptography \
-  && apk del openssl-dev \
-  && apk add libressl-dev \
-  && apk del gcc python3-dev musl-dev libffi-dev
-# TODO workaround end
-
 ADD requirements.txt /app
 
 RUN pip3 install -r requirements.txt
