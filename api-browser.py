@@ -222,16 +222,16 @@ def check_referer(function):
 def do_something_whenever_a_request_comes_in():
     url = request.url
     if os.environ[API_BROWSER_DEBUG] == 'Y':
-        print("Api-browser request: %s" % url)
+        print("\nApi-browser request: %s" % url)
         print('Referer:\t%s' % request.headers.get('Referer'))
-        # print('Environ:\t%s' % request.environ)
-        # print('Path:\t%s' % request.path)
-        # print('Full_path:\t%s' % request.full_path)
-        # print('Script_root:\t%s' % request.script_root)
-        # print('Url:\t%s' % request.url)
-        # print('Base_url:\t%s' % request.base_url)
-        # print('Url_root:\t%s' % request.url_root)
-        # print('Scheme:\t%s' % request.scheme)
+        print('Environ:\t%s' % request.environ)
+        print('Path:\t%s' % request.path)
+        print('Full_path:\t%s' % request.full_path)
+        print('Script_root:\t%s' % request.script_root)
+        print('Url:\t%s' % request.url)
+        print('Base_url:\t%s' % request.base_url)
+        print('Url_root:\t%s' % request.url_root)
+        print('Scheme:\t%s' % request.scheme)
 
 @app.after_request
 def add_header(response):
@@ -422,7 +422,6 @@ port = os.getenv('PORT', '5000')
 
 if __name__ == "__main__":
     print('Starting %s....' % sys.argv[0])
-    print('Build: %s' % time.ctime(os.path.getmtime(sys.argv[0])))
     print('Python: ' + sys.version)
     print('Environment Variables:')
     for key in os.environ.keys():
