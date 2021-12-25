@@ -18,9 +18,3 @@ To generate self signed certificate:
 openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
 ```
 
-Kube Info:
-```bash
-ibmcloud login -a cloud.ibm.com -r us-east -g JKs Resource Group
-ibmcloud ks cluster config --cluster bp2vucbw0acqse0v8p9g
-export KUBECONFIG=/Users/$USER/.bluemix/plugins/container-service/clusters/bp2vucbw0acqse0v8p9g/kube-config-wdc07-kellrman.yml
-```

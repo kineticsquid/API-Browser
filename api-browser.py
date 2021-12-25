@@ -38,12 +38,6 @@ TEST_IAM_DOMAIN = 'iam.test.cloud.ibm.com'
 PPRD_APIKEY_KEY = 'PPRD_APIKEY'
 PSTG_APIKEY_KEY = 'PSTG_APIKEY'
 
-URL_ROOT_KEY = 'URL_ROOT'
-
-url_root = os.environ.get(URL_ROOT_KEY, None)
-if url_root is None:
-    url_root = ''
-
 """
 Custom exception to surface HTTP status codes
 """
@@ -81,7 +75,7 @@ def display_error_page(error, **kwargs):
     if log_message is None:
         log_message = error_message
     print('Error %s: %s' % (str(error), log_message))
-    return render_template('error.html', image_file=image_file, error_message=error_message, url_root=url_root)
+    return render_template('error.html', image_file=image_file, error_message=error_message)
 
 
 """
@@ -179,7 +173,7 @@ def add_links(json_results, region):
     matches = re.findall(api_url_regex, json_results)
     for match in matches:
         url = match.replace('"', '')
-        href = '<a href="%s/resource-controller.%s%s">%s</a>' % (url_root, region, url, match)
+        href = '<a href="/resource-controller.%s%s">%s</a>' % (region, url, match)
         json_results = json_results.replace(match, href)
 
     # Add hrefs for links of this form: "https://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/nl-classifier-dashboard.html"
@@ -230,7 +224,6 @@ def do_something_whenever_a_request_comes_in():
         print('Script_root:\t%s' % request.script_root)
         print('Url:\t%s' % request.url)
         print('Base_url:\t%s' % request.base_url)
-        print('Url_root:\t%s' % request.url_root)
         print('Scheme:\t%s' % request.scheme)
 
 @app.after_request
@@ -250,7 +243,7 @@ def handle_bad_request(e):
 
 @app.route('/')
 def Welcome():
-    return render_template('results.html', modalstyle='modal-hidden', url_root=url_root)
+    return render_template('results.html', modalstyle='modal-hidden')
 
 
 @app.route('/printenv')
@@ -258,17 +251,12 @@ def printenv():
     output = 'Environment Variables:'
     for key in os.environ.keys():
         output = '%s\n%s - %s' % (output, key, os.environ.get(key))
-    return render_template('blank.html', message=str(output), title='Environment Variables', url_root=url_root)
+    return render_template('blank.html', message=str(output), title='Environment Variables')
 
 
-@app.route('/build')
+@app.route('/build', methods=['GET', 'POST'])
 def build():
-    return app.send_static_file('build.txt')
-
-
-@app.route('/webwidget')
-def webwidget():
-    return render_template('webwidget.html', title='Webwidget ASoC Test', url_root=url_root)
+    return date_environ
 
 
 @app.route('/echo', methods=['GET', 'POST'])
@@ -284,7 +272,7 @@ def echo():
     form = request.form
     for key in form.keys():
         output_string = '%s\n%s - %s' % (output_string, key, form.get(key))
-    return render_template('blank.html', message=str(output_string), title='Echo Input', url_root=url_root)
+    return render_template('blank.html', message=str(output_string), title='Echo Input')
 
 
 @app.route('/error/<string:str>')
@@ -304,9 +292,7 @@ def Login():
         redirect_url = bluemix_domain
     # Just in case, if there is no leading '/', add one
     if redirect_url[0] != '/':
-        redirect_url = '%s/%s' % (url_root, redirect_url)
-    else:
-        redirect_url = '%s%s' % (url_root, redirect_url)
+        redirect_url = '/%s' % redirect_url
     # make the call to authenticate. Save the bearer token in the session object if successful. Then redirect to the
     # redirect URL. Otherwise, something went wrong, return a 403.
     try:
@@ -353,10 +339,7 @@ def Logout():
     for key in list(session):
         if key[0] != '_':
             session.pop(key, None)
-    if url_root == '':
-        return redirect('/')
-    else:
-        return redirect(url_root)
+    return redirect('/')
 
 
 @app.route('/<path:request_path>')
@@ -383,19 +366,19 @@ def Handle_Everything_Else(request_path):
     # Now try again to look for credentials. If we don't find them, meaning no environment variables
     # were defined, cause the login modal prompt to be displayed and set the redirect
     if domain not in session:
-        return render_template('results.html', redirect=full_path, domain=domain, modalstyle='modal', url_root=url_root)
+        return render_template('results.html', redirect=full_path, domain=domain, modalstyle='modal')
     # otherwise, the user is authenticated to this region.
     else:
         # if only the region is sent, display a page with links to make top level API calls.
         if api is None:
             # this render statement adds the right region to the hrefs
             if TEST_CLOUD_DOMAIN in domain:
-                initial_links = render_template('initial-content.html', domain=domain, url_root=url_root)
+                initial_links = render_template('initial-content.html', domain=domain)
             else:
-                initial_links = render_template('initial-content.html', domain=domain, url_root=url_root)
+                initial_links = render_template('initial-content.html', domain=domain)
             initial_page = render_template('results.html', title=domain,
                                            domain=domain, content=initial_links,
-                                           modalstyle='modal-hidden', url_root=url_root)
+                                           modalstyle='modal-hidden')
             resp = make_response(initial_page, 200)
             return resp
         # otherwise, this is an API. Get the bearer token from the session object.
@@ -409,7 +392,7 @@ def Handle_Everything_Else(request_path):
                 api_results = get_all_bluemix_results(api_url, {'Authorization': bearer_token})
                 displayable_content_with_links = get_disp_content(api_results, domain)
                 page = render_template('results.html', title=api, domain=domain, content=displayable_content_with_links,
-                                       modalstyle='modal-hidden', url_root=url_root)
+                                       modalstyle='modal-hidden')
                 resp = make_response(page, 200)
                 return resp
             except(Exception) as e:
@@ -418,20 +401,16 @@ def Handle_Everything_Else(request_path):
                 else:
                     return display_error_page(404, log_message=str(e))
 
-port = os.getenv('PORT', '5000')
+print('Starting %s....' % sys.argv[0])
+print('Python: ' + sys.version)
+date_environ = os.environ.get('DATE')
+if date_environ is None:
+    date_environ = 'dev environment'
+print('Running build: %s' % date_environ)
+print('Environment Variables:')
+environment_vars = dict(os.environ)
+print(environment_vars)
 
 if __name__ == "__main__":
-    print('Starting %s....' % sys.argv[0])
-    print('Python: ' + sys.version)
-    print('Environment Variables:')
-    for key in os.environ.keys():
-        print('%s:\t%s' % (key, os.environ.get(key)))
-    # Set session cookies to be permanent. We're doing this so we can set a shorter expiration. See @before_request.
-    app.permanent_session_lifetime = timedelta(seconds=SESSION_EXPIRATION_IN_SECONDS)
-    app.secret_key = '\n¨üdõ¿\x1a\x97\x96¤\x94¹ÃÊ$<\x13¼±Ç.e1Ø\x11>¹\nM¤|^u\x08P\x12!¦¯§\x13\x07\x95w\x90²-]L"'
-    app.run(host='0.0.0.0', port=int(port))
-    # app.run(host='0.0.0.0', port=int(port), ssl_context='adhoc')
-    # app.run(host='0.0.0.0', port=int(port), ssl_context=('cert.pem', 'key.pem'))
-
-    session.permanent = True
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
