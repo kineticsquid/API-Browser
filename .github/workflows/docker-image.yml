@@ -1,0 +1,25 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ googleCloud ]
+  pull_request:
+    branches: [ googleCloud ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Delete old docker image
+      run: docker rmi kineticsquid/api-browser:latest
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag kineticsquid/api-browser:latest    
+    - name: Push new image
+      run: docker push kineticsquid/api-browser:latest
+    - name: List images
+      run: docker images
+
