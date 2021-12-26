@@ -14,10 +14,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: List images
-      run: docker images
-    - name: Delete old docker image
-      run: docker rmi kineticsquid/api-browser:latest
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag kineticsquid/api-browser:latest    
     - name: Push new image
