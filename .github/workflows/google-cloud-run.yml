@@ -39,9 +39,9 @@ jobs:
         run: docker push $IMAGE_NAME
 
       - name: Google Cloud Deploy
-        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }} --allow-unauthenticated --project cloud-run-stuff \
-          --region us-central1 --source ./
+        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }} --allow-unauthenticated --project cloud-run-stuff --region us-central1 --source ./
 
       - name: Google Cloud Image Deploy
-        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}2 --allow-unauthenticated --project cloud-run-stuff \
-          --image $IMAGE_NAME --region us-central1 --platform managed
+        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}2 --allow-unauthenticated --project cloud-run-stuff --image $IMAGE_NAME --region us-central1 --platform managed
+
+
