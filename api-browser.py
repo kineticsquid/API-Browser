@@ -3,6 +3,10 @@ Browser to allow one to navigate IBM Cloud API. Authentication is IBM id, but no
 Define and use an APIKEY to access. Either specify at the login prompt or define APIKEYs to environment variables.
 Setting FLASK_DEBUG=1 environment variable to enable debugging and auto reloading of changed files
 """
+from flask import session
+from flask import request
+from flask import Flask, render_template, make_response, redirect
+# from flask import Flask, request, render_template, make_response, session, redirect
 import json
 import os
 import os.path
@@ -12,7 +16,6 @@ import time
 from datetime import timedelta
 from functools import wraps
 import requests
-from flask import Flask, request, render_template, make_response, session, redirect
 # from flask_sslify import SSLify
 
 app = Flask(__name__)
@@ -254,11 +257,6 @@ def printenv():
     return render_template('blank.html', message=str(output), title='Environment Variables')
 
 
-@app.route('/build', methods=['GET', 'POST'])
-def build():
-    return date_environ
-
-
 @app.route('/echo', methods=['GET', 'POST'])
 def echo():
     session_str = json.dumps(dict(session), indent=4)
@@ -401,16 +399,30 @@ def Handle_Everything_Else(request_path):
                 else:
                     return display_error_page(404, log_message=str(e))
 
+
+@app.route('/build', methods=['GET', 'POST'])
+def build():
+    try:
+        return app.send_static_file('build.txt')
+    except Exception:
+        return generate_build_stamp()
+
+
+def generate_build_stamp():
+    from datetime import date
+    return 'Development build - %s' % date.today().strftime("%m/%d/%y")
+
 print('Starting %s....' % sys.argv[0])
 print('Python: ' + sys.version)
-date_environ = os.environ.get('DATE')
-if date_environ is None:
-    date_environ = 'dev environment'
-print('Running build: %s' % date_environ)
-print('Environment Variables:')
-environment_vars = dict(os.environ)
-print(environment_vars)
+try:
+    build_file = open('static/build.txt')
+    build_stamp = build_file.readlines()[0]
+    build_file.close()
+except FileNotFoundError:
+    from datetime import date
+    build_stamp = generate_build_stamp()
+print('Running build: %s' % build_stamp)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-
+    # app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

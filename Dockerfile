@@ -18,6 +18,10 @@ RUN mkdir /app/templates
 ADD static/images/* /app/static/images/
 ADD static/stylesheets/* /app/static/stylesheets/
 ADD templates/* /app/templates/
+RUN date > /app/static/build.txt
+
+RUN ls -R
+RUN cat /app/static/build.txt
 
 # Run app.py when the container launches
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 api-browser:app
