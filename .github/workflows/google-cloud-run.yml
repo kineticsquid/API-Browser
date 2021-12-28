@@ -8,40 +8,40 @@ on:
 
 jobs:
 
-    deploy:
+  deploy:
 
-        name: Setup Gcloud Account
-        runs-on: ubuntu-latest
-        env:
-          IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/${{ secrets.GCP_APPLICATION }}
-        steps:
+    name: Setup Gcloud Account
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/${{ secrets.GCP_APPLICATION }}
+    steps:
 
-        - name: Login
-          uses: google-github-actions/setup-gcloud@master
-          with:
-            project_id: ${{ secrets.GCP_PROJECT }}
-            service_account_email: ${{ secrets.GCP_EMAIL }}
-            service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+      - name: Login
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+          service_account_email: ${{ secrets.GCP_EMAIL }}
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }}
 
-        - name: Outputs Environment Variable
-          run: printenv
+      - name: Outputs Environment Variable
+        run: printenv
 
-        - name: Configure Docker
-          run: gcloud auth configure-docker --quiet
+      - name: Configure Docker
+        run: gcloud auth configure-docker --quiet
 
-        - name: Checkout repository
-          uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-        - name: Build Docker image
-          run: docker build . -t $IMAGE_NAME
+      - name: Build Docker image
+        run: docker build . -t $IMAGE_NAME
 
-        - name: Push Docker image
-          run: docker push $IMAGE_NAME
+      - name: Push Docker image
+        run: docker push $IMAGE_NAME
 
-        - name: Google Cloud Deploy
-          run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }} --allow-unauthenticated --project cloud-run-stuff \
+      - name: Google Cloud Deploy
+        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }} --allow-unauthenticated --project cloud-run-stuff \
           --region us-central1 --source ./
 
-        - name: Google Cloud Image Deploy
-          run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}2 --allow-unauthenticated --project cloud-run-stuff \
+      - name: Google Cloud Image Deploy
+        run: gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}2 --allow-unauthenticated --project cloud-run-stuff \
           --image $IMAGE_NAME --region us-central1 --platform managed
