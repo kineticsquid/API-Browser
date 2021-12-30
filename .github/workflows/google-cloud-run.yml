@@ -50,8 +50,3 @@ jobs:
 
       - name: Google Cloud Deploy
         run: gcloud run deploy ${{ secrets.GCP_APPLICATION }} --allow-unauthenticated --project cloud-run-stuff --region us-central1 --source ./
-
-      - name: Google Cloud Image Deploy
-        run: gcloud run deploy ${{ secrets.GCP_APPLICATION }}2 --image $DOCKER_HUB_IMAGE_NAME --allow-unauthenticated --project cloud-run-stuff --region us-central1 --platform managed
-
-
