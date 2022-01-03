@@ -20,5 +20,3 @@ openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 36
 
 GitHub actions:
 https://github.com/google-github-actions/setup-gcloud/blob/master/example-workflows/cloud-build/README.md
-
-https://docs.bmc.com/docs/PATROL4GoogleCloudPlatform/10/creating-a-service-account-key-in-the-google-cloud-platform-project-799095477.html
