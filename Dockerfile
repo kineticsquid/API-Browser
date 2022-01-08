@@ -21,6 +21,7 @@ ADD templates/* /app/templates/
 RUN date > /app/static/build.txt
 
 RUN ls -R
+RUN echo 'Build:'
 RUN cat /app/static/build.txt
 
 # Run app.py when the container launches
