@@ -37,7 +37,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Build hub.docker.com Docker image
-        run: docker build ./johnkellerman.org -t $DOCKER_HUB_IMAGE_NAME
+        run: docker build ./ -t $DOCKER_HUB_IMAGE_NAME
 
       - name: Push hub.docker.com Docker image
         run: docker push $DOCKER_HUB_IMAGE_NAME
