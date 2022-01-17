@@ -402,11 +402,12 @@ def Handle_Everything_Else(request_path):
 
 @app.route('/build', methods=['GET', 'POST'])
 def build():
+    print(sys.argv[0])
+    print('Python: ' + sys.version)
     try:
         return app.send_static_file('build.txt')
     except Exception:
         return generate_build_stamp()
-
 
 def generate_build_stamp():
     from datetime import date
