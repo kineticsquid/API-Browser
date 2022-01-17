@@ -48,6 +48,7 @@ jobs:
         with:
           service: ${{ secrets.GCP_APPLICATION }}
           project_id: ${{ secrets.GCP_PROJECT }}
+          source: ./
           region: us-central1
 
       - name: test the url
