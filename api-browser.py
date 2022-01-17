@@ -409,7 +409,7 @@ def build():
     except FileNotFoundError:
         from datetime import date
         build_stamp = generate_build_stamp()
-    results = 'Running %s.\n Build %s.\nPython %s.' % (sys.argv[0], build_stamp, sys.version)
+    results = 'Running %s.\nBuild %s.\nPython %s.' % (sys.argv[0], build_stamp, sys.version)
     return results
 
 def generate_build_stamp():
