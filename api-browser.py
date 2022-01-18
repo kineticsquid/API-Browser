@@ -409,14 +409,14 @@ def build():
     except FileNotFoundError:
         from datetime import date
         build_stamp = generate_build_stamp()
-    results = 'Running %s.\nBuild %s.\nPython %s.' % (sys.argv[0], build_stamp, sys.version)
+    results = 'Running %s %s.\nBuild %s.\nPython %s.' % (sys.argv[0], app.name, build_stamp, sys.version)
     return results
 
 def generate_build_stamp():
     from datetime import date
     return 'Development build - %s' % date.today().strftime("%m/%d/%y")
 
-print('Starting %s....' % sys.argv[0])
+print('Starting %s %s' % (sys.argv[0], app.name))
 print('Python: ' + sys.version)
 try:
     build_file = open('static/build.txt')
