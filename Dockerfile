@@ -1,29 +1,18 @@
-FROM python:3.9-alpine
+# Python image to use.
+FROM python:3.9
 
 # Set the working directory to /app
 WORKDIR /app
 
-# Set this to fix a bug in c include files not being found
-ENV LIBRARY_PATH=/lib:/usr/lib
+# copy the requirements file used for dependencies
+COPY requirements.txt .
 
-ADD requirements.txt /app
+# Install any needed packages specified in requirements.txt
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-RUN pip3 install -r requirements.txt
-
-ADD api-browser.py /app
-RUN mkdir /app/static
-RUN mkdir /app/static/images
-RUN mkdir /app/static/stylesheets
-RUN mkdir /app/templates
-ADD static/images/* /app/static/images/
-ADD static/stylesheets/* /app/static/stylesheets/
-ADD templates/* /app/templates/
+# Copy the rest of the working directory contents into the container at /app
+COPY . .
 RUN date > /app/static/build.txt
 
-RUN ls -R
-RUN echo 'Build:'
-RUN cat /app/static/build.txt
-
 # Run app.py when the container launches
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 api-browser:app
-
+ENTRYPOINT ["python", "app.py"]

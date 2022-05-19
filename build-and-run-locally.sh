@@ -9,3 +9,6 @@ docker push kineticsquid/api-browser:latest
 echo "Docker Images..."
 docker images
 
+echo "Now running..."
+./.vscode/run-image-locally.sh
+
